@@ -8,6 +8,6 @@ public class PolveJsonRpcTest {
 		String nodeUrl = "http://admin:huobijp@52.199.36.243:8332";
 		BitcoinJSONRPCClient client = new BitcoinJSONRPCClient(nodeUrl);
 		System.out.println("network info => " + client.getNetworkInfo());
-		System.out.println("validate address => " + client.validateAddress("1CrqxZeWTjNXvw7AGCDFwDz9yEmmwSXCS8"));
+		System.out.println("validate address => " + client.validateAddress("13FpbqJoYY3cCPfUomE1oxctXDWJQPoEvJ"));
 	}
 }

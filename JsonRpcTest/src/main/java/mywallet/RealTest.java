@@ -5,12 +5,14 @@ import com.google.gson.reflect.TypeToken;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
-import mywallet.domain.UtxoResponse;
+import mywallet.domain.MetanetNodeUTXO;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
+import org.bitcoinj.script.ScriptChunk;
+import org.bitcoinj.script.ScriptOpCodes;
 import wf.bitcoin.javabitcoindrpcclient.BitcoinJSONRPCClient;
 
 import java.io.IOException;
@@ -30,6 +32,7 @@ public class RealTest {
 	private static NetworkParameters params;
 	private static OkHttpClient okHttpClient;
 	private static Gson gson;
+	private static final byte[] METANET_FLAG = HEX.decode("6d657461");
 
 	static {
 		params = MainNetParams.get();
@@ -71,14 +74,14 @@ public class RealTest {
 		String url = String.format("https://api.bitindex.network/api/v3/main/addr/%s/utxo", address);
 		Request request = new Request.Builder().url(url).build();
 		Response response = okHttpClient.newCall(request).execute();
-		List<UtxoResponse> utxoResponses = new ArrayList<>();
+		List<MetanetNodeUTXO> utxoRespons = new ArrayList<>();
 		if (response.isSuccessful()) {
 			String json = response.body().string();
-			utxoResponses = gson.fromJson(json,new TypeToken<List<UtxoResponse>>(){}.getType());
+			utxoRespons = gson.fromJson(json,new TypeToken<List<MetanetNodeUTXO>>(){}.getType());
 		}
 		// 将响应存入UTXO
 		List<UTXO> utxos = new ArrayList<>();
-		for (UtxoResponse utxoResp : utxoResponses) {
+		for (MetanetNodeUTXO utxoResp : utxoRespons) {
 			UTXO utxo = new UTXO(Sha256Hash.wrap(utxoResp.getTxid()), utxoResp.getVout(),
 					Coin.parseCoin(utxoResp.getAmount()), utxoResp.getHeight(),false,
 					new Script(HEX.decode(utxoResp.getScriptPubKey())), address.toBase58());
@@ -87,38 +90,70 @@ public class RealTest {
 		return utxos;
 	}
 
-	public static String buildRawOpreturnTx(DeterministicKey masterKey, String data, List<UTXO> utxos) {
+	public static String buildRawOpreturnTx(DeterministicKey parentKey, UTXO inputUtxo, Address childNodeAddress, String ouputValueToChildNode,
+											Script opreturnPayloadScript) throws InsufficientMoneyException {
 
-		Address myAddress = masterKey.toAddress(params);
+		Address parentNodeAddress = parentKey.toAddress(params);
 		Transaction tx = new Transaction(params);
 
 		// 选择UTXO作为Input
-		UTXO inputUtxo = utxos.get(0);
+		Coin inputValue = inputUtxo.getValue();
 
 		// 根据数据长度计算交易费
-		Integer dataLength = data.getBytes().length;
-		Coin txFee = Coin.SATOSHI.multiply(210 + dataLength);
+		List<ScriptChunk> payloadChunks = opreturnPayloadScript.getChunks();
+		Integer dataLength = payloadChunks.get(payloadChunks.size() - 1).toString().getBytes().length;
+		Coin txFeeValue = Coin.SATOSHI.multiply(270 + dataLength);
+		Coin outputValue = Coin.parseCoin(ouputValueToChildNode);
+
+
+		if (inputValue.subtract(txFeeValue).isLessThan(outputValue)) {
+			throw new InsufficientMoneyException(outputValue.plus(txFeeValue).subtract(inputValue));
+		}
 
 		// OP_RETURN 携带数据
-		Script opReturnScript = ScriptBuilder.createOpReturnScript(data.getBytes());
-		tx.addOutput(Coin.ZERO, opReturnScript);
+		tx.addOutput(Coin.ZERO, opreturnPayloadScript);
+		// 给子节点的输出
+		tx.addOutput(outputValue, childNodeAddress);
 		// 找零的输出，找零会原来的地址
-		Coin changeCoin = inputUtxo.getValue().minus(txFee);
-		tx.addOutput(changeCoin, myAddress);
+		Coin changeCoin = inputValue.subtract(txFeeValue).subtract(outputValue);
+		tx.addOutput(changeCoin, parentNodeAddress);
 
 		// 先将input加入交易中
 		TransactionInput input = tx.addInput(inputUtxo.getHash(), inputUtxo.getIndex(), new Script(new byte[]{}));
 		// 签名交易，使用Hash类型[ALL | FORK_ID]
 		Sha256Hash hash = tx.hashForSignatureWitness(0, inputUtxo.getScript(),
 				inputUtxo.getValue(), Transaction.SigHash.ALL, false);
-		ECKey.ECDSASignature ecSig = masterKey.sign(hash);
+		ECKey.ECDSASignature ecSig = parentKey.sign(hash);
 		TransactionSignature txSig = new TransactionSignature(ecSig, Transaction.SigHash.ALL, false, true);
 
 		// 叫签名放入输入中
-		input.setScriptSig(ScriptBuilder.createInputScript(txSig, masterKey));
+		input.setScriptSig(ScriptBuilder.createInputScript(txSig, parentKey));
 
 		String txHex = HEX.encode(tx.bitcoinSerialize());
 		return txHex;
+	}
+
+	public static Script buildMetaNetPayLoad(Address childNodeAddress, Sha256Hash parentTxidHash, String data) {
+		ScriptBuilder payloadBuilder = new ScriptBuilder();
+		byte[] childNodePubKeyHash = childNodeAddress.getHash160();
+		// OP_RETURN <METANET_FLAG> <PubKeyHash_node> <Txid_Parent> <DATA>
+		Script payloadScript = payloadBuilder.op(ScriptOpCodes.OP_RETURN)
+				.data(METANET_FLAG)
+				.data(childNodePubKeyHash)
+				.data(parentTxidHash.getBytes())
+				.data(data.getBytes())
+				.build();
+		return payloadScript;
+	}
+
+	public static DeterministicKey deriveChildKeyByPath(DeterministicKey masterKey, String path) {
+		// 路径表示法
+		DeterministicHierarchy hierarchy = new DeterministicHierarchy(masterKey);
+		List<ChildNumber> numbers = HDUtils.parsePath(path);
+		DeterministicKey childKey = hierarchy.get(numbers, false, true);
+		System.out.format("childKey => %s\n", childKey.getPrivateKeyAsHex());
+		System.out.println("path =>" + childKey.getPath());
+		return childKey;
 	}
 
 	public static void decode(String txHex) {
@@ -142,7 +177,14 @@ public class RealTest {
 
 		Address address = masterKey.toAddress(params);
 		List<UTXO> utxos = getUtxoByAddress(address);
-		String txHex = buildRawOpreturnTx(masterKey, "YAO Chao Loves WANG Shuci", utxos);
+		UTXO utxo = utxos.get(0);
+		String path = "M/1";
+		DeterministicKey childNodeKey = deriveChildKeyByPath(masterKey, path);
+		System.out.println(HEX.encode(childNodeKey.getPubKeyHash()));
+		System.out.println(HEX.encode(childNodeKey.toAddress(params).getHash160()));
+		Script opreturnPayLoad = buildMetaNetPayLoad(childNodeKey.toAddress(params), utxo.getHash(),path + " 0 huobi yc yc123");
+		System.out.println();
+		String txHex = buildRawOpreturnTx(masterKey, utxo, childNodeKey.toAddress(params), "0.00020000", opreturnPayLoad);
 		decode(txHex);
 		broadcast(txHex);
 	}

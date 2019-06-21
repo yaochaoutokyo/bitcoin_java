@@ -74,9 +74,9 @@ public class HDKeyTest {
 
 		// 路径表示法
 		DeterministicHierarchy hierarchy = new DeterministicHierarchy(masterKey);
-		String path = "M/12/12H";
+		String path = "/1";
 		List<ChildNumber> numbers = HDUtils.parsePath(path);
-		DeterministicKey keyFromHDPath = hierarchy.get(numbers, false, true);
+		DeterministicKey keyFromHDPath = hierarchy.get(numbers, true, true);
 		System.out.format("harden child privkey (path) => %s\n", keyFromHDPath.getPrivateKeyAsHex());
 		System.out.println("path =>" + keyFromHDPath.getPath());
 	}

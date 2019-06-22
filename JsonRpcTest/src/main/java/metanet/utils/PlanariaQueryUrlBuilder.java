@@ -60,7 +60,7 @@ public class PlanariaQueryUrlBuilder {
 	}
 
 	/**
-	 * @description: build planaria query url
+	 * @description: buildRawTxHex planaria query url
 	 * @date: 2019/06/22
 	 **/
 	public String buildUrl() {

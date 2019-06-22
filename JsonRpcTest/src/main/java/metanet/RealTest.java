@@ -152,8 +152,6 @@ public class RealTest {
 		DeterministicHierarchy hierarchy = new DeterministicHierarchy(masterKey);
 		List<ChildNumber> numbers = HDUtils.parsePath(path);
 		DeterministicKey childKey = hierarchy.get(numbers, false, true);
-		System.out.format("childKey => %s\n", childKey.getPrivateKeyAsHex());
-		System.out.println("path =>" + childKey.getPath());
 		return childKey;
 	}
 

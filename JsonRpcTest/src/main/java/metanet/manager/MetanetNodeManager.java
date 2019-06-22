@@ -46,7 +46,7 @@ public class MetanetNodeManager {
 	 * @date: 2019/06/22
 	 **/
 	public MetanetNode getMetanetTree(MetanetNode rootNode) throws IOException {
-		// using Breadth-First Search to build Metanet Tree
+		// using Breadth-First Search to buildRawTxHex Metanet Tree
 		Queue<MetanetNode> nodeQueue = new LinkedList<>();
 		if (rootNode != null) {
 			nodeQueue.offer(rootNode);
@@ -216,7 +216,7 @@ public class MetanetNodeManager {
 	}
 
 	/**
-	 * @description: A common method to add pubKeys of children into a treeSet. It is able to build
+	 * @description: A common method to add pubKeys of children into a treeSet. It is able to buildRawTxHex
 	 * a metanet transaction with more than one metanet outputs, but each child can only have one output
 	 * @param txsNode jsonNode of uncomfirmed or comfired txs
 	 * @param childrenSet resluting set of children pubKeys

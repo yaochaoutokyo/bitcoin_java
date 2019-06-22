@@ -1,4 +1,4 @@
-package mywallet.domain;
+package metanet.domain;
 
 /**
  * @description: Class for storing metenet data
@@ -16,7 +16,7 @@ public class MetanetNodeData {
 	 * @description: The data of metanet output
 	 * @date: 2019/06/21
 	 **/
-	private String data;
+	private String payload;
 
 	public String getTxid() {
 		return txid;
@@ -26,11 +26,11 @@ public class MetanetNodeData {
 		this.txid = txid;
 	}
 
-	public String getData() {
-		return data;
+	public String getPayload() {
+		return payload;
 	}
 
-	public void setData(String data) {
-		this.data = data;
+	public void setPayload(String payload) {
+		this.payload = payload;
 	}
 }

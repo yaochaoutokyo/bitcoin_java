@@ -1,3 +1,5 @@
+package practice;
+
 import wf.bitcoin.javabitcoindrpcclient.BitcoinJSONRPCClient;
 
 /**

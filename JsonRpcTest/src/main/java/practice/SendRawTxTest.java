@@ -1,3 +1,5 @@
+package practice;
+
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.Script;

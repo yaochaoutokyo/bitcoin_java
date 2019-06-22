@@ -1,4 +1,4 @@
-package mywallet;
+package metanet;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -6,7 +6,7 @@ import com.lambdaworks.codec.Base64;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
-import mywallet.domain.MetanetNodeUTXO;
+import metanet.domain.MetanetNodeUTXO;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.params.MainNetParams;
@@ -84,7 +84,7 @@ public class RealTest {
 		List<UTXO> utxos = new ArrayList<>();
 		for (MetanetNodeUTXO utxoResp : utxoRespons) {
 			UTXO utxo = new UTXO(Sha256Hash.wrap(utxoResp.getTxid()), utxoResp.getVout(),
-					Coin.parseCoin(utxoResp.getAmount()), utxoResp.getHeight(),false,
+					Coin.SATOSHI.multiply(utxoResp.getValue()), 10000,false,
 					new Script(HEX.decode(utxoResp.getScriptPubKey())), address.toBase58());
 			utxos.add(utxo);
 		}

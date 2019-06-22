@@ -1,3 +1,5 @@
+package practice;
+
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.params.MainNetParams;
@@ -46,7 +48,7 @@ public class RealTest {
 	}
 
 	public static void main(String[] args) throws Exception {
-//		List<String> mnemonics = RealTest.genMnemonicCode();
+//		List<String> mnemonics = practice.RealTest.genMnemonicCode();
 //		System.out.println(mnemonics);
 		List<String> mnemonics = Arrays.asList(new String[]{"forum", "rug", "slice", "snack", "width", "inside",
 				"mad", "cotton", "noodle", "april", "dumb", "adapt"});

@@ -1,4 +1,4 @@
-package mywallet.domain;
+package metanet.domain;
 
 /**
  * Created by yaochao on 2019/06/19
@@ -27,7 +27,7 @@ public class MetanetNodeUTXO {
 	 * @description: Amount of the UTXO (satoshi)
 	 * @date: 2019/06/21
 	 **/
-	private String amount;
+	private long value;
 
 	/**
 	 * @description: The locking Script of UTXO
@@ -35,12 +35,6 @@ public class MetanetNodeUTXO {
 	 * @date: 2019/06/21
 	 **/
 	private String scriptPubKey;
-
-	/**
-	 * @description: Block height of the UTXO
-	 * @date: 2019/06/21
-	 **/
-	private int height;
 
 	public String getAddress() {
 		return address;
@@ -66,20 +60,12 @@ public class MetanetNodeUTXO {
 		this.vout = vout;
 	}
 
-	public String getAmount() {
-		return amount;
+	public long getValue() {
+		return value;
 	}
 
-	public void setAmount(String amount) {
-		this.amount = amount;
-	}
-
-	public int getHeight() {
-		return height;
-	}
-
-	public void setHeight(int height) {
-		this.height = height;
+	public void setValue(long value) {
+		this.value = value;
 	}
 
 	public String getScriptPubKey() {

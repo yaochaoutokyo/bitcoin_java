@@ -1,3 +1,5 @@
+package practice;
+
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.params.MainNetParams;

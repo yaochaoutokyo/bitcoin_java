@@ -1,4 +1,4 @@
-package mywallet;
+package metanet;
 
 import com.google.common.base.Joiner;
 import org.bitcoinj.core.*;

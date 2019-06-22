@@ -131,8 +131,17 @@ public class MetanetNodeManager {
 				if (metaFlag != null && metaFlag.equals(META)) {
 					String childPubKey = objectMapper.treeToValue(output.at("/b2"), String.class);
 					if (currentNode.getPubKey().equals(childPubKey)) {
-						String payload = objectMapper.treeToValue(output.at("/s4"), String.class);
-						data.setPayload(payload);
+						List<String> payloads = new ArrayList<>();
+						JsonNode payLoadNode = output.at("/s4");
+						int index = 4;
+						while (! payLoadNode.toString().isEmpty()) {
+							String payload = objectMapper.treeToValue(payLoadNode, String.class);
+							payloads.add(payload);
+							String nextPayloadNodePath = String.format("/s%s", ++index);
+							payLoadNode = output.at(nextPayloadNodePath);
+						}
+
+						data.setPayloads(payloads);
 						// todo: support multi-output to one child key
 						// the is only one meta-data output belong to current node, so once it has been found, break the loop
 						break;

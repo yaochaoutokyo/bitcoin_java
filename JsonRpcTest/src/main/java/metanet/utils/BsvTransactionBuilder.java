@@ -56,11 +56,11 @@ public class BsvTransactionBuilder {
 	 **/
 	public BsvTransactionBuilder addMetanetOpReturnOutput(String base64ChildPubKey,
 														  String parentNodeTxid, List<String> payloads) {
-		ScriptBuilder payloadBuilder = new ScriptBuilder();
 		Sha256Hash parentNodeTxidHash = Sha256Hash.wrap(parentNodeTxid);
 		byte[] childNodePubKey = Base64.decode(base64ChildPubKey);
 		// Build the head of Metanet output
-		payloadBuilder.op(ScriptOpCodes.OP_RETURN)
+		ScriptBuilder payloadBuilder = new ScriptBuilder()
+				.op(ScriptOpCodes.OP_RETURN)
 				.data(METANET_FLAG)
 				.data(childNodePubKey)
 				.data(parentNodeTxidHash.getBytes());
@@ -68,7 +68,6 @@ public class BsvTransactionBuilder {
 		for (String payload : payloads) {
 			payloadBuilder.data(payload.getBytes());
 		}
-		// build output Script
 		Script metaNetOutputScript = payloadBuilder.build();
 		tx.addOutput(Coin.ZERO, metaNetOutputScript);
 		return this;
@@ -119,15 +118,16 @@ public class BsvTransactionBuilder {
 		BsvTransactionBuilder txBuilder = new BsvTransactionBuilder(params);
 		List<MetanetNodeUTXO> currentNodeUtxoList = currentNode.getUtxoList();
 		Coin currentNodeBalance = Coin.SATOSHI.multiply(currentNode.getBalance());
-		Coin valueSendToChildNode = Coin.SATOSHI.multiply(20000);
-		Coin txFee = Coin.SATOSHI.multiply(468);
+		Coin valueSendToChildNode = Coin.SATOSHI.multiply(10000);
+		Coin txFee = Coin.SATOSHI.multiply(326);
 		List<String> payloads = new ArrayList<>();
 		payloads.add("multi");
 		payloads.add("part");
 		payloads.add("output");
-		DeterministicKey childkey1 = RealTest.deriveChildKeyByPath(masterKey, "M/1/0");
+		DeterministicKey childkey2 = RealTest.deriveChildKeyByPath(masterKey, "M/1/1");
 		String txHex = txBuilder
-				.addP2PKHOutput(childkey1.toAddress(params), valueSendToChildNode)
+				.addMetanetOpReturnOutput(Base64.encode(childkey2.getPubKey()),currentNodeUtxoList.get(0).getTxid(), payloads)
+				.addP2PKHOutput(childkey2.toAddress(params), valueSendToChildNode)
 				.addP2PKHOutput(currentKey.toAddress(params), currentNodeBalance.subtract(valueSendToChildNode).subtract(txFee))
 				.addInputs(currentNodeUtxoList, currentKey)
 				.buildRawTxHex();

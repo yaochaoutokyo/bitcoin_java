@@ -1,5 +1,7 @@
 package metanet.domain;
 
+import java.util.List;
+
 /**
  * @description: Class for storing metenet data
  * @author YAO Chao
@@ -16,7 +18,7 @@ public class MetanetNodeData {
 	 * @description: The data of metanet output
 	 * @date: 2019/06/21
 	 **/
-	private String payload;
+	private List<String> payloads;
 
 	public String getTxid() {
 		return txid;
@@ -26,11 +28,11 @@ public class MetanetNodeData {
 		this.txid = txid;
 	}
 
-	public String getPayload() {
-		return payload;
+	public List<String> getPayloads() {
+		return payloads;
 	}
 
-	public void setPayload(String payload) {
-		this.payload = payload;
+	public void setPayloads(List<String> payloads) {
+		this.payloads = payloads;
 	}
 }

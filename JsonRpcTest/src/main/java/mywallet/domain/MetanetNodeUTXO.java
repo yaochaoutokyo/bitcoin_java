@@ -6,16 +6,16 @@ package mywallet.domain;
 public class MetanetNodeUTXO {
 
 	/**
-	 * @description: Address of node
-	 * @date: 2019/06/21
-	 **/
-	private String address;
-
-	/**
 	 * @description: Transaction id of the UTXO
 	 * @date: 2019/06/21
 	 **/
 	private String txid;
+
+	/**
+	 * @description: Address of node
+	 * @date: 2019/06/21
+	 **/
+	private String address;
 
 	/**
 	 * @description: Index of the UTXO

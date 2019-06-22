@@ -2,6 +2,7 @@ package mywallet;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.lambdaworks.codec.Base64;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
@@ -102,7 +103,7 @@ public class RealTest {
 		// 根据数据长度计算交易费
 		List<ScriptChunk> payloadChunks = opreturnPayloadScript.getChunks();
 		Integer dataLength = payloadChunks.get(payloadChunks.size() - 1).toString().getBytes().length;
-		Coin txFeeValue = Coin.SATOSHI.multiply(270 + dataLength);
+		Coin txFeeValue = Coin.SATOSHI.multiply(329);
 		Coin outputValue = Coin.parseCoin(ouputValueToChildNode);
 
 
@@ -133,13 +134,13 @@ public class RealTest {
 		return txHex;
 	}
 
-	public static Script buildMetaNetPayLoad(Address childNodeAddress, Sha256Hash parentTxidHash, String data) {
+	public static Script buildMetaNetPayLoad(DeterministicKey childKey, Sha256Hash parentTxidHash, String data) {
 		ScriptBuilder payloadBuilder = new ScriptBuilder();
-		byte[] childNodePubKeyHash = childNodeAddress.getHash160();
-		// OP_RETURN <METANET_FLAG> <PubKeyHash_node> <Txid_Parent> <DATA>
+		byte[] childNodePubKey = childKey.getPubKey();
+		// OP_RETURN <METANET_FLAG> <PubKey_node> <Txid_Parent> <DATA>
 		Script payloadScript = payloadBuilder.op(ScriptOpCodes.OP_RETURN)
 				.data(METANET_FLAG)
-				.data(childNodePubKeyHash)
+				.data(childNodePubKey)
 				.data(parentTxidHash.getBytes())
 				.data(data.getBytes())
 				.build();
@@ -174,15 +175,14 @@ public class RealTest {
 				"mad", "cotton", "noodle", "april", "dumb", "adapt"});
 		String passphrase = "123456";
 		DeterministicKey masterKey = RealTest.restoreMasterKeyFromMnemonicCode(mnemonics,passphrase);
-
+		System.out.println(Base64.encode(masterKey.getPubKey()));
 		Address address = masterKey.toAddress(params);
 		List<UTXO> utxos = getUtxoByAddress(address);
 		UTXO utxo = utxos.get(0);
 		String path = "M/1";
 		DeterministicKey childNodeKey = deriveChildKeyByPath(masterKey, path);
-		System.out.println(HEX.encode(childNodeKey.getPubKeyHash()));
-		System.out.println(HEX.encode(childNodeKey.toAddress(params).getHash160()));
-		Script opreturnPayLoad = buildMetaNetPayLoad(childNodeKey.toAddress(params), utxo.getHash(),path + " 0 huobi yc yc123");
+		System.out.println(Base64.encode(childNodeKey.getPubKey()));
+		Script opreturnPayLoad = buildMetaNetPayLoad(childNodeKey, utxo.getHash(),path + " 0 huobi yc yc123");
 		System.out.println();
 		String txHex = buildRawOpreturnTx(masterKey, utxo, childNodeKey.toAddress(params), "0.00020000", opreturnPayLoad);
 		decode(txHex);

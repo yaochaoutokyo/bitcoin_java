@@ -10,14 +10,14 @@ import java.util.List;
 public class MetanetNode {
 
 	/**
-	 * @description: Address of current node
+	 * @description: base64 format of pubKey of current node
 	 * @date: 2019/06/21
 	 **/
-	private String address;
+	private String pubKey;
 
 	/**
-	 * @description: Path of the address of current node in the HD hierarchy, which is used to
-	 * retrieve private key and public key information from masterKey
+	 * @description: Path of current node in the HD hierarchy, which is used to retrieve private
+	 * key information from masterKey
 	 * @date: 2019/06/21
 	 **/
 	private String path;
@@ -27,26 +27,34 @@ public class MetanetNode {
 	 * is the latest version of the data, we can edit data through changing the version of data
 	 * @date: 2019/06/21
 	 **/
-	private List<String> txids;
+	private List<String> dataTxids;
 
 	/**
-	 * @description: Reference to parent node
+	 * @description: Transaction ids of UTXO belong to the address of current metanet node
+	 * @date: 2019/06/21
+	 **/
+	private List<String> utxoTxids;
+
+	/**
+	 * @description: base64 format of pubKey of parent node
 	 * @date: 2019/06/21
 	 **/
 	private String parent;
 
 	/**
-	 * @description: Addresses of child nodes
+	 * @description: base64 format of pubKey of child nodes
 	 * @date: 2019/06/21
 	 **/
 	private List<String> children;
 
-	public MetanetNode(String address) {
-		this.address = address;
+	public MetanetNode(String pubKey, String path) {
+		this.pubKey = pubKey;
+		this.path = path;
 	}
 
-	public MetanetNode(String address, String parent) {
-		this.address = address;
+	public MetanetNode(String pubKey, String path, String parent) {
+		this.pubKey = pubKey;
+		this.path = path;
 		this.parent = parent;
 	}
 
@@ -58,20 +66,20 @@ public class MetanetNode {
 		this.path = path;
 	}
 
-	public String getAddress() {
-		return address;
+	public String getPubKey() {
+		return pubKey;
 	}
 
-	public void setAddress(String address) {
-		this.address = address;
+	public void setPubKey(String pubKey) {
+		this.pubKey = pubKey;
 	}
 
-	public List<String> getTxids() {
-		return txids;
+	public List<String> getDataTxids() {
+		return dataTxids;
 	}
 
-	public void setTxids(List<String> txids) {
-		this.txids = txids;
+	public void setDataTxids(List<String> dataTxids) {
+		this.dataTxids = dataTxids;
 	}
 
 	public String getParent() {
@@ -88,5 +96,13 @@ public class MetanetNode {
 
 	public void setChildren(List<String> children) {
 		this.children = children;
+	}
+
+	public List<String> getUtxoTxids() {
+		return utxoTxids;
+	}
+
+	public void setUtxoTxids(List<String> utxoTxids) {
+		this.utxoTxids = utxoTxids;
 	}
 }

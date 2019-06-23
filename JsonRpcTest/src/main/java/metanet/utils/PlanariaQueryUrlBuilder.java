@@ -15,9 +15,7 @@ public class PlanariaQueryUrlBuilder {
 
 	private static final String PLANARIA_QUERY_URL = "http://52.199.36.243:3000/q/1KWqy2WbNpEPC7hwvfJbvXy2vekS2LwGim/";
 
-	private static final Integer DEFAULT_QUERY_LIMIT = 10;
-
-	private Integer limit;
+	private String limitCondition = ",{\"limit\": %d}";
 
 	public PlanariaQueryUrlBuilder() {
 		conditions = new ArrayList<>();
@@ -69,7 +67,11 @@ public class PlanariaQueryUrlBuilder {
 	 * @date: 2019/06/23
 	 **/
 	public PlanariaQueryUrlBuilder setQueryLimit(Integer limit) {
-		this.limit = limit;
+		if (limit != null) {
+			limitCondition = String.format(limitCondition, limit);
+		} else {
+			limitCondition = "";
+		}
 		return this;
 	}
 
@@ -86,14 +88,8 @@ public class PlanariaQueryUrlBuilder {
 				stringBuilder.append(",");
 			}
 		}
-
-		String originalJson = String.format("{\n" +
-				"  \"v\": 3,\n" +
-				"  \"q\": {\n" +
-				"    \"find\": {%s},\n" +
-				"    \"limit\": %d\n" +
-				"  }\n" +
-				"}", stringBuilder.toString(), limit == null ? DEFAULT_QUERY_LIMIT : limit);
+		String originalJson = String.format("{ \"v\": 3, \"q\": { \"find\": {%s} %s}}",
+				stringBuilder.toString(), limitCondition);
 
 		// apply base64 encode to the original json
 		String queryCondition = Base64.encode(originalJson.getBytes());

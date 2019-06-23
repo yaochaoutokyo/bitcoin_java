@@ -63,14 +63,14 @@ public class MetanetNodeManager {
 
 	/**
 	 * @description: Collect information of currentNode
+	 * @param currentNode current metanet node
 	 * @date: 2019/06/22
 	 **/
 	public MetanetNode getMetanetNodeInfo(MetanetNode currentNode) throws IOException {
-		// todo: deal with response more than 10 terms of data
-		getAndSetNodeDataList(currentNode, 10);
+		getAndSetNodeDataList(currentNode, null);
 		getAndSetUTXOList(currentNode);
 		countAndSetBalance(currentNode);
-		getAndSetChildrenNode(currentNode, 10);
+		getAndSetChildrenNode(currentNode, null);
 		return currentNode;
 	}
 
@@ -102,10 +102,11 @@ public class MetanetNodeManager {
 			throws IOException {
 		List<MetanetNodeData> dataList = new ArrayList<>();
 		String json = getMetaTxSentToCurrentNode(currentNode, limit);
-		JsonNode uncomfirmedTxsNode = objectMapper.readTree(json).at("/u");
-		parseTxJsonNodeIntoDataList(uncomfirmedTxsNode, dataList, currentNode);
-		JsonNode comfirmedTxsNode = objectMapper.readTree(json).at("/c");
-		parseTxJsonNodeIntoDataList(comfirmedTxsNode, dataList, currentNode);
+		// the newest data is current data, so start from unconfirmed tx to traverse from newest tx to oldest tx
+		JsonNode unconfirmedTxsNode = objectMapper.readTree(json).at("/u");
+		parseTxJsonNodeIntoDataList(unconfirmedTxsNode, dataList, currentNode);
+		JsonNode confirmedTxsNode = objectMapper.readTree(json).at("/c");
+		parseTxJsonNodeIntoDataList(confirmedTxsNode, dataList, currentNode);
 		currentNode.setDataList(dataList);
 		return dataList;
 	}
@@ -122,9 +123,6 @@ public class MetanetNodeManager {
 			throws JsonProcessingException {
 		for (JsonNode txNode : txsNode) {
 			MetanetNodeData data = new MetanetNodeData();
-			String txid = objectMapper.treeToValue(txNode.at("/tx/h"), String.class);
-			data.setTxid(txid);
-
 			// find the only one metanet output which belong to current node
 			JsonNode outputsNode = txNode.at("/out");
 			for (JsonNode output : outputsNode) {
@@ -132,7 +130,9 @@ public class MetanetNodeManager {
 				String metaFlag = metaNode.toString().isEmpty() ? null : objectMapper.treeToValue(metaNode, String.class);
 				if (metaFlag != null && metaFlag.equals(META)) {
 					String childPubKey = objectMapper.treeToValue(output.at("/b2"), String.class);
-					if (currentNode.getPubKey().equals(childPubKey)) {
+					// root node don't have parentTxid, it can distinguish root node with this feature
+					String parentTxid = output.at("/b3").toString();
+					if (currentNode.getPubKey().equals(childPubKey) && ! parentTxid.isEmpty()) {
 						List<String> payloads = new ArrayList<>();
 						JsonNode payLoadNode = output.at("/s4");
 						int index = 4;
@@ -142,7 +142,6 @@ public class MetanetNodeManager {
 							String nextPayloadNodePath = String.format("/s%s", ++index);
 							payLoadNode = output.at(nextPayloadNodePath);
 						}
-
 						data.setPayloads(payloads);
 						// todo: support multi-output to one child key
 						// the is only one meta-data output belong to current node, so once it has been found, break the loop
@@ -150,7 +149,12 @@ public class MetanetNodeManager {
 					}
 				}
 			}
-			dataList.add(data);
+			String txid = objectMapper.treeToValue(txNode.at("/tx/h"), String.class);
+			// root node don't have payloads, so don't need setData
+			if (data.getPayloads() != null) {
+				data.setTxid(txid);
+				dataList.add(data);
+			}
 		}
 	}
 
@@ -208,12 +212,13 @@ public class MetanetNodeManager {
 	 * @date: 2019/06/22
 	 **/
 	public List<MetanetNode> getAndSetChildrenNode(MetanetNode currentNode, Integer limit) throws IOException {
-		TreeSet<String> childrenPubKeySet = new TreeSet<>();
+		LinkedHashSet<String> childrenPubKeySet = new LinkedHashSet<>();
 		String json = getMetaTxSentFromCurrentNode(currentNode, limit);
-		JsonNode uncomfirmedTxsNode = objectMapper.readTree(json).at("/u");
-		parseTxJsonIntoChildrenPubKeySet(uncomfirmedTxsNode, childrenPubKeySet);
-		JsonNode comfirmedTxsNode = objectMapper.readTree(json).at("/c");
-		parseTxJsonIntoChildrenPubKeySet(comfirmedTxsNode, childrenPubKeySet);
+		// need to traverse from oldest tx to newest tx, so start from confirmed transaction
+		JsonNode confirmedTxsNode = objectMapper.readTree(json).at("/c");
+		parseTxJsonIntoChildrenPubKeySet(confirmedTxsNode, childrenPubKeySet);
+		JsonNode unconfirmedTxsNode = objectMapper.readTree(json).at("/u");
+		parseTxJsonIntoChildrenPubKeySet(unconfirmedTxsNode, childrenPubKeySet);
 
 		List<MetanetNode> children = new ArrayList<>();
 		int indexOfChildPath = 0;
@@ -234,15 +239,22 @@ public class MetanetNodeManager {
 	 * @param childrenSet resluting set of children pubKeys
 	 * @date: 2019/06/22
 	 **/
-	private void parseTxJsonIntoChildrenPubKeySet(JsonNode txsNode, TreeSet<String> childrenSet) throws JsonProcessingException {
-		for (JsonNode txNode : txsNode) {
+	private void parseTxJsonIntoChildrenPubKeySet(JsonNode txsNode, LinkedHashSet<String> childrenSet)
+			throws JsonProcessingException {
+		int txNodeNum = txsNode.size();
+		// reverse order
+		for (int i = txNodeNum - 1; i >= 0; i--) {
+			JsonNode txNode = txsNode.get(i);
 			JsonNode outputsNode = txNode.at("/out");
 			for (JsonNode output : outputsNode) {
 				JsonNode metaNode = output.at("/s1");
 				String metaFlag = metaNode.toString().isEmpty() ? null : objectMapper.treeToValue(metaNode, String.class);
 				if (metaFlag != null && metaFlag.equals(META)) {
 					String childPubKey = objectMapper.treeToValue(output.at("/b2"), String.class);
-					childrenSet.add(childPubKey);
+					if (! childrenSet.contains(childPubKey)) {
+						childrenSet.add(childPubKey);
+					}
+
 				}
 			}
 		}
@@ -253,7 +265,7 @@ public class MetanetNodeManager {
 		MetanetNodeManager metanetNodeManager = new MetanetNodeManager(params);
 		MetanetNode currentNode = new MetanetNode("A4QtyIYcWnnpK6D+4j0uNNi6m/buRjPhNnEMYl22E0gs", "M",null);
 		String json = metanetNodeManager.getMetaTxSentFromCurrentNode(currentNode, 10);
-		metanetNodeManager.getMetanetTree(currentNode);
+		metanetNodeManager.getMetanetNodeInfo(currentNode);
 		System.out.println(json);
 	}
 }

@@ -6,6 +6,7 @@ import com.squareup.okhttp.Response;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
 import wf.bitcoin.javabitcoindrpcclient.BitcoinJSONRPCClient;
+import wf.bitcoin.javabitcoindrpcclient.BitcoinRPCException;
 
 import java.io.IOException;
 
@@ -108,7 +109,13 @@ public class HttpRequestSender {
 	 **/
 	public static String broadcastRawTransaction(String txHex) {
 		// 广播交易，将交易送给节点处理,如果交易不合法会被拒绝
-		String txid = jsonRpcClient.sendRawTransaction(txHex);
+		String txid = null;
+		try {
+			txid = jsonRpcClient.sendRawTransaction(txHex);
+		} catch (BitcoinRPCException e) {
+			e.printStackTrace();
+			System.out.println("illegal transaction");
+		}
 		System.out.format("txid => %s\n", txid);
 		return txid;
 	}

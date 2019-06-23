@@ -49,6 +49,23 @@ public class BsvTransactionBuilder {
 	}
 
 	/**
+	 * @description: Add metanet-format root node output: the formula is
+	 * OP_RETURN META_FLAG PubKey_root
+	 * @param base64RootPubKey Base64 format of PubKey of root metanet node
+	 * @date: 2019/06/23
+	 **/
+	public BsvTransactionBuilder addMetanetRootNodeOutput(String base64RootPubKey) {
+		byte[] childNodePubKey = Base64.decode(base64RootPubKey);
+		Script metanetRootOutputScript = new ScriptBuilder()
+				.op(ScriptOpCodes.OP_RETURN)
+				.data(METANET_FLAG)
+				.data(childNodePubKey)
+				.build();
+		tx.addOutput(Coin.ZERO, metanetRootOutputScript);
+		return this;
+	}
+
+	/**
 	 * @description: Add Metanet-format OP_RETURN output: the formula is
 	 * OP_RETURN META_FLAG PubKey_childNode TxHash_parentNode payload1 payload2....
 	 * @param base64ChildPubKey Base64 format of PubKey of child metanet node
@@ -56,11 +73,8 @@ public class BsvTransactionBuilder {
 	 * @param payloads a List of String
 	 * @date: 2019/06/22
 	 **/
-	public BsvTransactionBuilder addMetanetOpReturnOutput(String base64ChildPubKey,
-														  String parentNodeTxid, List<String> payloads) {
-		if (payloads == null || payloads.isEmpty()) {
-			return this;
-		}
+	public BsvTransactionBuilder addMetanetChildNodeOutput(String base64ChildPubKey
+			, String parentNodeTxid, List<String> payloads) {
 		Sha256Hash parentNodeTxidHash = Sha256Hash.wrap(parentNodeTxid);
 		byte[] childNodePubKey = Base64.decode(base64ChildPubKey);
 		// Build the head of Metanet output
@@ -146,7 +160,7 @@ public class BsvTransactionBuilder {
 		payloads.add("1");
 		DeterministicKey childkey2 = RealTest.deriveChildKeyByPath(masterKey, "M/1/1");
 		String txHex = txBuilder
-				.addMetanetOpReturnOutput(Base64.encode(childkey2.getPubKey()),currentNodeUtxoList.get(0).getTxid(), payloads)
+				.addMetanetChildNodeOutput(Base64.encode(childkey2.getPubKey()),currentNodeUtxoList.get(0).getTxid(), payloads)
 				.addP2PKHOutput(childkey2.toAddress(params), valueSendToChildNode)
 				.addP2PKHOutput(currentKey.toAddress(params), currentNodeBalance.subtract(valueSendToChildNode).subtract(txFee))
 				.addSignedInputs(currentNodeUtxoList, childkey2)

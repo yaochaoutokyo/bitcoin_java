@@ -26,6 +26,8 @@ public class BsvTransactionBuilder {
 
 	private Transaction tx;
 
+	private TransactionOutput changeOutput;
+
 	private NetworkParameters params;
 
 	private static final byte[] METANET_FLAG = HEX.decode("6d657461");
@@ -56,6 +58,9 @@ public class BsvTransactionBuilder {
 	 **/
 	public BsvTransactionBuilder addMetanetOpReturnOutput(String base64ChildPubKey,
 														  String parentNodeTxid, List<String> payloads) {
+		if (payloads == null || payloads.isEmpty()) {
+			return this;
+		}
 		Sha256Hash parentNodeTxidHash = Sha256Hash.wrap(parentNodeTxid);
 		byte[] childNodePubKey = Base64.decode(base64ChildPubKey);
 		// Build the head of Metanet output
@@ -73,7 +78,7 @@ public class BsvTransactionBuilder {
 		return this;
 	}
 
-	public BsvTransactionBuilder addInputs(List<MetanetNodeUTXO> utxoList) {
+	private BsvTransactionBuilder addInputs(List<MetanetNodeUTXO> utxoList) {
 		// add all input into transaction
 		for (MetanetNodeUTXO utxo : utxoList) {
 			Sha256Hash utxoHash = Sha256Hash.wrap(utxo.getTxid());
@@ -82,7 +87,7 @@ public class BsvTransactionBuilder {
 		return this;
 	}
 
-	public BsvTransactionBuilder addSignatures(List<MetanetNodeUTXO> utxoList, ECKey parentKey) {
+	private BsvTransactionBuilder addSignatures(List<MetanetNodeUTXO> utxoList, ECKey parentKey) {
 		for (int i = 0; i< utxoList.size(); i++) {
 			// make signature with [ALL | FORK_ID]
 			MetanetNodeUTXO utxo = utxoList.get(i);
@@ -101,8 +106,13 @@ public class BsvTransactionBuilder {
 	}
 
 	public BsvTransactionBuilder addSignedInputs(List<MetanetNodeUTXO> utxoList, ECKey parentKey) {
-		this.addInputs(utxoList).addSignatures(utxoList, parentKey);
+		this.addInputs(utxoList);
+		addSignatures(utxoList, parentKey);
 		return this;
+	}
+
+	public Transaction buildTx() {
+		return tx;
 	}
 
 	public String buildRawTxHex() {

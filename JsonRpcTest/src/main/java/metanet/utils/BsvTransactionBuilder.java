@@ -73,13 +73,16 @@ public class BsvTransactionBuilder {
 		return this;
 	}
 
-	public BsvTransactionBuilder addInputs(List<MetanetNodeUTXO> utxoList, ECKey parentKey) {
+	public BsvTransactionBuilder addInputs(List<MetanetNodeUTXO> utxoList) {
 		// add all input into transaction
 		for (MetanetNodeUTXO utxo : utxoList) {
 			Sha256Hash utxoHash = Sha256Hash.wrap(utxo.getTxid());
 			tx.addInput(utxoHash, utxo.getVout(), new Script(new byte[]{}));
 		}
+		return this;
+	}
 
+	public BsvTransactionBuilder addSignatures(List<MetanetNodeUTXO> utxoList, ECKey parentKey) {
 		for (int i = 0; i< utxoList.size(); i++) {
 			// make signature with [ALL | FORK_ID]
 			MetanetNodeUTXO utxo = utxoList.get(i);
@@ -97,6 +100,11 @@ public class BsvTransactionBuilder {
 		return this;
 	}
 
+	public BsvTransactionBuilder addSignedInputs(List<MetanetNodeUTXO> utxoList, ECKey parentKey) {
+		this.addInputs(utxoList).addSignatures(utxoList, parentKey);
+		return this;
+	}
+
 	public String buildRawTxHex() {
 		String txHex = HEX.encode(tx.bitcoinSerialize());
 		return txHex;
@@ -106,36 +114,35 @@ public class BsvTransactionBuilder {
 		NetworkParameters params = MainNetParams.get();
 		MetanetNodeManager metanetNodeManager = new MetanetNodeManager(params);
 		MetanetNode currentNode = new MetanetNode("Ah92lnR275QO2nvCHIrzFO4dGJbB1bY1RSEnTSCL5kzn", "M/1",null);
-		metanetNodeManager.getMetanetTree(currentNode);
+		metanetNodeManager.getMetanetNodeInfo(currentNode);
 
 		List<String> mnemonics = Arrays.asList(new String[]{"forum", "rug", "slice", "snack", "width", "inside",
 				"mad", "cotton", "noodle", "april", "dumb", "adapt"});
 		String passphrase = "123456";
 		DeterministicKey masterKey = RealTest.restoreMasterKeyFromMnemonicCode(mnemonics,passphrase);
 		DeterministicKey currentKey = RealTest.deriveChildKeyByPath(masterKey, currentNode.getPath());
+		DeterministicKey currentKey1 = HDHierarchyKeyGenerator.deriveChildKeyByRelativePath(masterKey, "/1");
 		System.out.println(Base64.encode(currentKey.getPubKey()));
+		System.out.println(Base64.encode(currentKey1.getPubKey()));
 
 		BsvTransactionBuilder txBuilder = new BsvTransactionBuilder(params);
 		List<MetanetNodeUTXO> currentNodeUtxoList = currentNode.getUtxoList();
 		Coin currentNodeBalance = Coin.SATOSHI.multiply(currentNode.getBalance());
-		Coin valueSendToChildNode = Coin.SATOSHI.multiply(10000);
+		Coin valueSendToChildNode = Coin.SATOSHI.multiply(5000);
 		Coin txFee = Coin.SATOSHI.multiply(326);
 		List<String> payloads = new ArrayList<>();
-		payloads.add("multi");
-		payloads.add("part");
-		payloads.add("output");
+		payloads.add("M/1/0");
+		payloads.add("test");
+		payloads.add("1");
 		DeterministicKey childkey2 = RealTest.deriveChildKeyByPath(masterKey, "M/1/1");
 		String txHex = txBuilder
 				.addMetanetOpReturnOutput(Base64.encode(childkey2.getPubKey()),currentNodeUtxoList.get(0).getTxid(), payloads)
 				.addP2PKHOutput(childkey2.toAddress(params), valueSendToChildNode)
 				.addP2PKHOutput(currentKey.toAddress(params), currentNodeBalance.subtract(valueSendToChildNode).subtract(txFee))
-				.addInputs(currentNodeUtxoList, currentKey)
+				.addSignedInputs(currentNodeUtxoList, childkey2)
 				.buildRawTxHex();
 		RealTest.decode(txHex);
-		RealTest.broadcast(txHex);
+//		RealTest.broadcast(txHex);
 		System.out.println("....");
-
-		// 8b3c5694c78f06d706f77ba1c442329e73559dc444cccb6c927bc0dee9caf266
-		// 88fc0f8b84e5960f5f50fd55c61742da68eefed7dff0f423a1e49eb53a332cc0
 	}
 }

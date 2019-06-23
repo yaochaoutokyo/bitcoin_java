@@ -66,10 +66,11 @@ public class MetanetNodeManager {
 	 * @date: 2019/06/22
 	 **/
 	public MetanetNode getMetanetNodeInfo(MetanetNode currentNode) throws IOException {
-		getAndSetNodeDataList(currentNode);
+		// todo: deal with response more than 10 terms of data
+		getAndSetNodeDataList(currentNode, 10);
 		getAndSetUTXOList(currentNode);
 		countAndSetBalance(currentNode);
-		getAndSetChildrenNode(currentNode);
+		getAndSetChildrenNode(currentNode, 10);
 		return currentNode;
 	}
 
@@ -79,12 +80,13 @@ public class MetanetNodeManager {
 	 * @return json
 	 * @date: 2019/06/22
 	 **/
-	private String getMetaTxSentToCurrentNode(MetanetNode currentNode) throws IOException {
+	private String getMetaTxSentToCurrentNode(MetanetNode currentNode, Integer limit) throws IOException {
 		PlanariaQueryUrlBuilder builder = new PlanariaQueryUrlBuilder();
 		String url = builder
 				.addOpReturn()
 				.addMetaFlag()
 				.addChildNodePubKeyScript(currentNode.getPubKey())
+				.setQueryLimit(limit)
 				.buildUrl();
 		String json = HttpRequestSender.sendHttpRequestToPlanaria(url);
 		return json;
@@ -96,10 +98,10 @@ public class MetanetNodeManager {
 	 * @param currentNode current metanet node
 	 * @date: 2019/06/22
 	 **/
-	public List<MetanetNodeData> getAndSetNodeDataList(MetanetNode currentNode)
+	public List<MetanetNodeData> getAndSetNodeDataList(MetanetNode currentNode, Integer limit)
 			throws IOException {
 		List<MetanetNodeData> dataList = new ArrayList<>();
-		String json = getMetaTxSentToCurrentNode(currentNode);
+		String json = getMetaTxSentToCurrentNode(currentNode, limit);
 		JsonNode uncomfirmedTxsNode = objectMapper.readTree(json).at("/u");
 		parseTxJsonNodeIntoDataList(uncomfirmedTxsNode, dataList, currentNode);
 		JsonNode comfirmedTxsNode = objectMapper.readTree(json).at("/c");
@@ -158,7 +160,7 @@ public class MetanetNodeManager {
 	 * @date: 2019/06/22
 	 **/
 	public List<MetanetNodeUTXO> getAndSetUTXOList(MetanetNode currentNode) throws IOException {
-		String json = HttpRequestSender.getUtxoForPubKey(currentNode.getPubKey(), params);
+		String json = HttpRequestSender.getUtxoForBase64PubKey(currentNode.getPubKey(), params);
 		List<MetanetNodeUTXO> utxoList = gson.fromJson(json, new TypeToken<List<MetanetNodeUTXO>>(){}.getType());
 		currentNode.setUtxoList(utxoList);
 		return utxoList;
@@ -188,12 +190,13 @@ public class MetanetNodeManager {
 	 * @return json
 	 * @date: 2019/06/22
 	 **/
-	private String getMetaTxSentFromCurrentNode(MetanetNode currentNode) throws IOException {
+	private String getMetaTxSentFromCurrentNode(MetanetNode currentNode, Integer limit) throws IOException {
 		PlanariaQueryUrlBuilder builder = new PlanariaQueryUrlBuilder();
 		String url = builder
 				.addOpReturn()
 				.addMetaFlag()
 				.addParentNodePubKey(currentNode.getPubKey())
+				.setQueryLimit(limit)
 				.buildUrl();
 		String json = HttpRequestSender.sendHttpRequestToPlanaria(url);
 		return json;
@@ -204,9 +207,9 @@ public class MetanetNodeManager {
 	 * @param currentNode current metanet node
 	 * @date: 2019/06/22
 	 **/
-	public List<MetanetNode> getAndSetChildrenNode(MetanetNode currentNode) throws IOException {
+	public List<MetanetNode> getAndSetChildrenNode(MetanetNode currentNode, Integer limit) throws IOException {
 		TreeSet<String> childrenPubKeySet = new TreeSet<>();
-		String json = getMetaTxSentFromCurrentNode(currentNode);
+		String json = getMetaTxSentFromCurrentNode(currentNode, limit);
 		JsonNode uncomfirmedTxsNode = objectMapper.readTree(json).at("/u");
 		parseTxJsonIntoChildrenPubKeySet(uncomfirmedTxsNode, childrenPubKeySet);
 		JsonNode comfirmedTxsNode = objectMapper.readTree(json).at("/c");
@@ -249,7 +252,7 @@ public class MetanetNodeManager {
 		NetworkParameters params = MainNetParams.get();
 		MetanetNodeManager metanetNodeManager = new MetanetNodeManager(params);
 		MetanetNode currentNode = new MetanetNode("A4QtyIYcWnnpK6D+4j0uNNi6m/buRjPhNnEMYl22E0gs", "M",null);
-		String json = metanetNodeManager.getMetaTxSentFromCurrentNode(currentNode);
+		String json = metanetNodeManager.getMetaTxSentFromCurrentNode(currentNode, 10);
 		metanetNodeManager.getMetanetTree(currentNode);
 		System.out.println(json);
 	}

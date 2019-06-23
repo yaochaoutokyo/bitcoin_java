@@ -19,6 +19,7 @@ import java.util.*;
 /**
  * @description: metanet format is the transaction with the inputs of Sig_parent and PubKey_Parent,
  * and the outputs of OP_RETURN, Metanet_Flag, PubKey_node, Txid_Parent, and payload.
+ * For Root node, it has OP_RETURN meta P_root and its own txide, without Txid_parent and payloads
  * @author YAO Chao
  * @date: 2019/06/22
  **/
@@ -93,8 +94,10 @@ public class MetanetNodeManager {
 	}
 
 	/**
-	 * @description: Get Txids of metanet data and parent of current node, the PubKey of parent
-	 * is the pubkey of the first input
+	 * @description: Get Txids of metanet data and parent of current node. For normal metanet node,
+	 * it must have OP_RETURN meta PubKey_node Txid_prarent, the payloads of normal metanet node can be empty,
+	 * but can't be null; However, for root metanet node, it must have OP_RETURN meta PubKey_root,
+	 * the payloads and parent_txid of root node is null
 	 * @param currentNode current metanet node
 	 * @date: 2019/06/22
 	 **/
@@ -123,6 +126,8 @@ public class MetanetNodeManager {
 			throws JsonProcessingException {
 		for (JsonNode txNode : txsNode) {
 			MetanetNodeData data = new MetanetNodeData();
+			String txid = objectMapper.treeToValue(txNode.at("/tx/h"), String.class);
+			data.setTxid(txid);
 			// find the only one metanet output which belong to current node
 			JsonNode outputsNode = txNode.at("/out");
 			for (JsonNode output : outputsNode) {
@@ -130,9 +135,8 @@ public class MetanetNodeManager {
 				String metaFlag = metaNode.toString().isEmpty() ? null : objectMapper.treeToValue(metaNode, String.class);
 				if (metaFlag != null && metaFlag.equals(META)) {
 					String childPubKey = objectMapper.treeToValue(output.at("/b2"), String.class);
-					// root node don't have parentTxid, it can distinguish root node with this feature
 					String parentTxid = output.at("/b3").toString();
-					if (currentNode.getPubKey().equals(childPubKey) && ! parentTxid.isEmpty()) {
+					if (currentNode.getPubKey().equals(childPubKey)) {
 						List<String> payloads = new ArrayList<>();
 						JsonNode payLoadNode = output.at("/s4");
 						int index = 4;
@@ -142,19 +146,18 @@ public class MetanetNodeManager {
 							String nextPayloadNodePath = String.format("/s%s", ++index);
 							payLoadNode = output.at(nextPayloadNodePath);
 						}
-						data.setPayloads(payloads);
+						// root node don't have parentTxid, it can distinguish root node with this feature
+						if (! parentTxid.isEmpty()) {
+							// if the node have parentTxid, set payloads, otherwise, leave payloads as null
+							data.setPayloads(payloads);
+						}
 						// todo: support multi-output to one child key
 						// the is only one meta-data output belong to current node, so once it has been found, break the loop
 						break;
 					}
 				}
 			}
-			String txid = objectMapper.treeToValue(txNode.at("/tx/h"), String.class);
-			// root node don't have payloads, so don't need setData
-			if (data.getPayloads() != null) {
-				data.setTxid(txid);
-				dataList.add(data);
-			}
+			dataList.add(data);
 		}
 	}
 

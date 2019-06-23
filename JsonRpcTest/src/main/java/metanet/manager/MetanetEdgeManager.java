@@ -3,6 +3,7 @@ package metanet.manager;
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import metanet.RealTest;
 import metanet.domain.MetanetNode;
+import metanet.domain.MetanetNodeData;
 import metanet.domain.MetanetNodeUTXO;
 import metanet.utils.BsvTransactionBuilder;
 import metanet.utils.HDHierarchyKeyGenerator;
@@ -134,7 +135,9 @@ public class MetanetEdgeManager {
 		// prepare necessary information for build a transaction
 		DeterministicKey parentKey = HDHierarchyKeyGenerator.deriveChildKeyByAbsolutePath(masterKey, parentNode.getPath());
 		List<MetanetNodeUTXO> parentNodeUtxoList = parentNode.getUtxoList();
-		String parentTxHash = parentNodeUtxoList.get(0).getTxid();
+		List<MetanetNodeData> parentNodeDataList = parentNode.getDataList();
+		// the newest data in the data list is the data tx of parent node
+		String parentNodeTxHash = parentNodeDataList.get(0).getTxid();
 		Address parentAddress = parentKey.toAddress(params);
 		DeterministicKey childKey = HDHierarchyKeyGenerator.deriveChildKeyByAbsolutePath(masterKey, childNode.getPath());
 		String base64ChildPubKey = Base64.encode(childKey.getPubKey());
@@ -145,7 +148,7 @@ public class MetanetEdgeManager {
 		if (isRoot) {
 			txBuilder.addMetanetRootNodeOutput(base64ChildPubKey);
 		} else if (payloads != null) {
-			txBuilder.addMetanetChildNodeOutput(base64ChildPubKey, parentTxHash, payloads);
+			txBuilder.addMetanetChildNodeOutput(base64ChildPubKey, parentNodeTxHash, payloads);
 		}
 
 		// add P2PKH output to child node

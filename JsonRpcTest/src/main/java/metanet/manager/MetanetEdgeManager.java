@@ -8,7 +8,6 @@ import metanet.utils.BsvTransactionBuilder;
 import metanet.utils.HttpRequestSender;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.DeterministicKey;
 import java.util.*;
@@ -19,6 +18,8 @@ import java.util.*;
 public class MetanetEdgeManager {
 
 	private NetworkParameters params;
+
+	private static final long DUST_VALUE_SATOSHI = 600L;
 
 	private static final long EXTRA_BYTES = 3L;
 
@@ -60,7 +61,7 @@ public class MetanetEdgeManager {
 	 * @date: 2019/06/23
 	 **/
 	public String buildEdgeToMetanetNodeWithoutValue(MetanetNode parentNode, MetanetNode childNode
-			, List<String> payloads) throws InsufficientMoneyException {
+			, List<String> payloads) {
 		return buildEdgeFromCurrentNodeToChild(parentNode, childNode, payloads, 0, false);
 	}
 
@@ -74,7 +75,7 @@ public class MetanetEdgeManager {
 	 * @date: 2019/06/23
 	 **/
 	public String buildEdgeToMetanetNodeWithValue(MetanetNode parentNode, MetanetNode childNode
-			, List<String> payloads, long valueSendToChild) throws InsufficientMoneyException, IllegalArgumentException {
+			, List<String> payloads, long valueSendToChild) {
 		return buildEdgeFromCurrentNodeToChild(parentNode, childNode, payloads, valueSendToChild, false);
 	}
 
@@ -85,8 +86,7 @@ public class MetanetEdgeManager {
 	 * @return Txid
 	 * @date: 2019/06/23
 	 **/
-	public String buildMetanetRootNodeWithoutValue(MetanetNode pseudoParentNode, MetanetNode rootNode)
-			throws InsufficientMoneyException {
+	public String buildMetanetRootNodeWithoutValue(MetanetNode pseudoParentNode, MetanetNode rootNode) {
 		return buildEdgeFromCurrentNodeToChild(pseudoParentNode, rootNode, null, 0, true);
 	}
 
@@ -99,12 +99,11 @@ public class MetanetEdgeManager {
 	 * @date: 2019/06/23
 	 **/
 	public String buildMetanetRootNodeWithValue(MetanetNode pseudoParentNode, MetanetNode rootNode
-			, long valueSendToRoot) throws InsufficientMoneyException, IllegalArgumentException {
+			, long valueSendToRoot) {
 		return buildEdgeFromCurrentNodeToChild(pseudoParentNode, rootNode, null, valueSendToRoot, true);
 	}
 
-	public String sendMoneyFromNodeAToNodeB(MetanetNode nodeA, MetanetNode nodeB, long value)
-			throws InsufficientMoneyException, IllegalArgumentException {
+	public String sendMoneyFromNodeAToNodeB(MetanetNode nodeA, MetanetNode nodeB, long value) {
 		return buildEdgeFromCurrentNodeToChild(nodeA, nodeB, null, value, false);
 	}
 
@@ -119,17 +118,18 @@ public class MetanetEdgeManager {
 	 * @date: 2019/06/23
 	 **/
 	private String buildEdgeFromCurrentNodeToChild(MetanetNode parentNode, MetanetNode childNode, List<String> payloads
-			, long valueSendToChild, boolean isRoot) throws InsufficientMoneyException, IllegalArgumentException {
+			, long valueSendToChild, boolean isRoot) {
 
-		if (valueSendToChild != 0L && valueSendToChild < 600L) {
-			throw new IllegalArgumentException("dust output");
+		if (valueSendToChild != 0L && valueSendToChild <= DUST_VALUE_SATOSHI) {
+			System.out.println("Dust output");
 		}
 		// prepare necessary information for build a transaction
 		DeterministicKey parentKey = parentNode.getKey();
 		List<MetanetNodeUTXO> parentNodeUtxoList = parentNode.getUtxoList();
 		List<MetanetNodeData> parentNodeDataList = parentNode.getDataList();
 		// the newest data in the data list is the data tx of parent node
-		String parentNodeTxHash = parentNodeDataList.get(0).getTxid();
+		// for non-metanet node, the parentNodeDataList is null, when create root node from a non-metanet node
+		// it should be careful for this feature
 		Address parentAddress = parentKey.toAddress(params);
 		DeterministicKey childKey = childNode.getKey();
 		String base64ChildPubKey = Base64.encode(childKey.getPubKey());
@@ -140,7 +140,8 @@ public class MetanetEdgeManager {
 		if (isRoot) {
 			txBuilder.addMetanetRootNodeOutput(base64ChildPubKey);
 		} else if (payloads != null) {
-			txBuilder.addMetanetChildNodeOutput(base64ChildPubKey, parentNodeTxHash, payloads);
+			String currentParentNodeDataHash = parentNode.getCurrentVersion();
+			txBuilder.addMetanetChildNodeOutput(base64ChildPubKey, currentParentNodeDataHash, payloads);
 		}
 
 		// add P2PKH output to child node
@@ -159,8 +160,10 @@ public class MetanetEdgeManager {
 		// calculate change value
 		Coin parentNodeBalance = Coin.SATOSHI.multiply(parentNode.getBalance());
 		Coin changeToParent = parentNodeBalance.subtract(outputValueToChild).subtract(transactionFee);
-		if (changeToParent.isLessThan(Coin.ZERO)) {
-			throw new InsufficientMoneyException(outputValueToChild.plus(transactionFee).subtract(parentNodeBalance));
+		Coin dustOutput = Coin.SATOSHI.multiply(DUST_VALUE_SATOSHI);
+		if (changeToParent.isLessThan(dustOutput)) {
+			Coin lackValue = outputValueToChild.add(transactionFee).add(dustOutput).subtract(parentNodeBalance);
+			System.out.println(String.format( "Balance is insufficient, lack of %d satoshi(s)", lackValue.value));
 		}
 
 		// add change, inputs into Tx, and sign it

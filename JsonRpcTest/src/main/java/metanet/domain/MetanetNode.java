@@ -30,6 +30,18 @@ public class MetanetNode {
 	private long balance;
 
 	/**
+	 * @description: the latest txid of meta-output
+	 * @date: 2019/06/24
+	 **/
+	private String currentVersion;
+
+	/**
+	 * @description: the latest content of data
+	 * @date: 2019/06/24
+	 **/
+	private List<String> currentData;
+
+	/**
 	 * @description: Transaction data which contain the OP_RETURN data, the first one in the list
 	 * is the latest version of the data, we can edit data through changing the version of data
 	 * @date: 2019/06/21
@@ -90,6 +102,22 @@ public class MetanetNode {
 
 	public void setDataList(List<MetanetNodeData> dataList) {
 		this.dataList = dataList;
+	}
+
+	public String getCurrentVersion() {
+		return currentVersion;
+	}
+
+	public void setCurrentVersion(String currentVersion) {
+		this.currentVersion = currentVersion;
+	}
+
+	public List<String> getCurrentData() {
+		return currentData;
+	}
+
+	public void setCurrentData(List<String> currentData) {
+		this.currentData = currentData;
 	}
 
 	public List<MetanetNodeUTXO> getUtxoList() {

@@ -84,6 +84,42 @@ public class BsvTransactionBuilder {
 		return this;
 	}
 
+	/**
+	 * @description: Add all UTXOs of parent node into transaction and sign them
+	 * @param utxoList utxos of parent node
+	 * @param parentKey the ECKey of parent
+	 * @date: 2019/06/24
+	 **/
+	public BsvTransactionBuilder addSignedInputs(List<MetanetNodeUTXO> utxoList, ECKey parentKey) {
+		this.addInputs(utxoList);
+		addSignatures(utxoList, parentKey);
+		return this;
+	}
+
+	/**
+	 * @description: Return the transaction object
+	 * @return transaction object
+	 * @date: 2019/06/24
+	 **/
+	public Transaction buildTx() {
+		return tx;
+	}
+
+	/**
+	 * @description: Return the hex of raw transaction
+	 * @return hex of raw transaction
+	 * @date: 2019/06/24
+	 **/
+	public String buildRawTxHex() {
+		String txHex = HEX.encode(tx.bitcoinSerialize());
+		return txHex;
+	}
+
+	/**
+	 * @description: add all of the UTXOs of parent node into the transaction inputs
+	 * @param utxoList utxos of parent node
+	 * @date: 2019/06/24
+	 **/
 	private BsvTransactionBuilder addInputs(List<MetanetNodeUTXO> utxoList) {
 		// add all input into transaction
 		for (MetanetNodeUTXO utxo : utxoList) {
@@ -93,6 +129,12 @@ public class BsvTransactionBuilder {
 		return this;
 	}
 
+	/**
+	 * @description: Sign the inputs with the privKey of parent node
+	 * @param utxoList utxos of parent node need to be signed
+	 * @param parentKey the ECKey of parent
+	 * @date: 2019/06/24
+	 **/
 	private BsvTransactionBuilder addSignatures(List<MetanetNodeUTXO> utxoList, ECKey parentKey) {
 		for (int i = 0; i< utxoList.size(); i++) {
 			// make signature with [ALL | FORK_ID]
@@ -109,20 +151,5 @@ public class BsvTransactionBuilder {
 			input.setScriptSig(sigScript);
 		}
 		return this;
-	}
-
-	public BsvTransactionBuilder addSignedInputs(List<MetanetNodeUTXO> utxoList, ECKey parentKey) {
-		this.addInputs(utxoList);
-		addSignatures(utxoList, parentKey);
-		return this;
-	}
-
-	public Transaction buildTx() {
-		return tx;
-	}
-
-	public String buildRawTxHex() {
-		String txHex = HEX.encode(tx.bitcoinSerialize());
-		return txHex;
 	}
 }

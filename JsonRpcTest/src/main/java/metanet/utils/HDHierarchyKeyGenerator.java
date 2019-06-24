@@ -1,16 +1,59 @@
 package metanet.utils;
 
-import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.crypto.DeterministicHierarchy;
-import org.bitcoinj.crypto.DeterministicKey;
-import org.bitcoinj.crypto.HDUtils;
+import org.bitcoinj.crypto.*;
 
+import java.io.IOException;
+import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by yaochao on 2019/06/23
  */
 public class HDHierarchyKeyGenerator {
+
+	/**
+	 * @description: Create new HD wallet, and return mnemonic codes
+	 * @return 12 mnemonic codes
+	 * @date: 2019/06/24
+	 **/
+	public static List<String> generateNewMnemonicCode() {
+		// generate random entropy using secure random generator
+		SecureRandom random = new SecureRandom();
+		byte[] entropy = new byte[16];
+		random.nextBytes(entropy);
+		// generate mnemonics
+		// entropy（128 bits） + CheckSum（first 4 bits of Sha256(entropy)）= 12 mnemonic words（132/11 = 12）
+		List<String> mnemonics = new ArrayList<>();
+		try {
+			MnemonicCode mnemonicCode = new MnemonicCode();
+			mnemonics = mnemonicCode.toMnemonic(entropy);
+		} catch (IOException e) {
+			System.out.println("Exception happened when create mnemonic code...");
+			e.printStackTrace();
+		} catch (MnemonicException.MnemonicLengthException e) {
+			System.out.println("Invalid entropy length...");
+			e.printStackTrace();
+		}
+
+		return mnemonics;
+	}
+
+	/**
+	 * @description: Restore masterkey of HD wallet with mnemonic code and optional passphrase
+	 * @param mnemonics 12 mnemonic codes
+	 * @param passphrase optional passphrase
+	 * @date: 2019/06/24
+	 **/
+	public static DeterministicKey restoreMasterKeyFromMnemonicCode(List<String> mnemonics, String passphrase) {
+		// calculate seed with mnemonics
+		// mnemonics + salt（"mnemonic" + optional passphrase）--2048 * HMAC-SHA512--> seed
+		byte[] seed = MnemonicCode.toSeed(mnemonics, passphrase);
+		// generate master key
+		// seed --HMAC-SHA512--> master privkey(256bit) + master chaincode(256bit)
+		DeterministicKey masterKey = HDKeyDerivation.createMasterPrivateKey(seed);
+		return masterKey;
+	}
 
 	/**
 	 * @description: Derive child key by absolute path

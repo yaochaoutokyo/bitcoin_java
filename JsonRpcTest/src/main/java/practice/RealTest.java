@@ -48,7 +48,7 @@ public class RealTest {
 	}
 
 	public static void main(String[] args) throws Exception {
-//		List<String> mnemonics = practice.RealTest.genMnemonicCode();
+//		List<String> mnemonics = practice.FileSystemGenerationTest.genMnemonicCode();
 //		System.out.println(mnemonics);
 		List<String> mnemonics = Arrays.asList(new String[]{"forum", "rug", "slice", "snack", "width", "inside",
 				"mad", "cotton", "noodle", "april", "dumb", "adapt"});

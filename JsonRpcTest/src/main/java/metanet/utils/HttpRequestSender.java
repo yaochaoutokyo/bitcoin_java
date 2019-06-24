@@ -39,7 +39,7 @@ public class HttpRequestSender {
 	 * @param url query url
 	 * @date: 2019/06/23
 	 **/
-	public static String sendHttpRequestToPlanaria(String url) throws IOException {
+	public static String sendHttpRequestToPlanaria(String url) {
 		Request request = new Request.Builder().header("key",PLANARIA_KEY).url(url).build();
 		return sendHttpRequest(request);
 	}
@@ -50,7 +50,7 @@ public class HttpRequestSender {
 	 * @param params network type
 	 * @date: 2019/06/23
 	 **/
-	public static String getUtxoForBase64PubKey(String base64PubKey, NetworkParameters params) throws IOException {
+	public static String getUtxoForBase64PubKey(String base64PubKey, NetworkParameters params) {
 		if (! params.equals(MainNetParams.get())) {
 			throw new IllegalArgumentException("currently Bitindex only support main net");
 		}
@@ -64,7 +64,7 @@ public class HttpRequestSender {
 	 * @param url url of request
 	 * @date: 2019/06/23
 	 **/
-	public static String sendHttpRequest(String url) throws IOException {
+	public static String sendHttpRequest(String url) {
 		Request request = new Request.Builder().url(url).build();
 		return sendHttpRequest(request);
 	}
@@ -74,7 +74,7 @@ public class HttpRequestSender {
 	 * @param request
 	 * @date: 2019/06/23
 	 **/
-	public static String sendHttpRequest(Request request) throws IOException {
+	public static String sendHttpRequest(Request request) {
 		Response response = null;
 		String json = null;
 		try {
@@ -82,9 +82,17 @@ public class HttpRequestSender {
 			if (response.isSuccessful()) {
 				json = response.body().string();
 			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.out.println("fail to build connection...");
 		} finally {
 			if (response != null) {
-				response.body().close();
+				try {
+					response.body().close();
+				} catch (IOException e) {
+					e.printStackTrace();
+					System.out.println("fail to close response body");
+				}
 			}
 		}
 		return json;
@@ -96,7 +104,6 @@ public class HttpRequestSender {
 	 * @date: 2019/06/23
 	 **/
 	public static String decodeRawTransaction(String txHex) {
-		// 使用节点旳decoderawtransaction调用来检查一下裸交易的内容是否与我们的预期一致
 		BitcoinJSONRPCClient.RawTransaction rawTx = jsonRpcClient.decodeRawTransaction(txHex);
 		System.out.format("raw tx => %s\n",rawTx);
 		return rawTx.toString();
@@ -108,13 +115,12 @@ public class HttpRequestSender {
 	 * @date: 2019/06/23
 	 **/
 	public static String broadcastRawTransaction(String txHex) {
-		// 广播交易，将交易送给节点处理,如果交易不合法会被拒绝
 		String txid = null;
 		try {
 			txid = jsonRpcClient.sendRawTransaction(txHex);
 		} catch (BitcoinRPCException e) {
 			e.printStackTrace();
-			System.out.println("illegal transaction");
+			System.out.println("illegal transaction...");
 		}
 		System.out.format("txid => %s\n", txid);
 		return txid;

@@ -24,7 +24,7 @@ import java.util.*;
  * @author YAO Chao
  * @date: 2019/06/22
  **/
-
+// todo: fix the problem of data version controll and restore node location in HD key tree
 public class MetanetNodeManager {
 
 	private ObjectMapper objectMapper;
@@ -47,7 +47,7 @@ public class MetanetNodeManager {
 	 * @param rootNode root of the tree
 	 * @date: 2019/06/22
 	 **/
-	public MetanetNode getMetanetTree(MetanetNode rootNode) throws IOException {
+	public MetanetNode getMetanetTree(MetanetNode rootNode) {
 		// using Breadth-First Search to buildRawTxHex Metanet Tree
 		Queue<MetanetNode> nodeQueue = new LinkedList<>();
 		if (rootNode != null) {
@@ -68,7 +68,7 @@ public class MetanetNodeManager {
 	 * @param currentNode current metanet node
 	 * @date: 2019/06/22
 	 **/
-	public MetanetNode getMetanetNodeInfo(MetanetNode currentNode) throws IOException {
+	public MetanetNode getMetanetNodeInfo(MetanetNode currentNode) {
 		getAndSetNodeDataList(currentNode, null);
 		getAndSetUTXOList(currentNode);
 		countAndSetBalance(currentNode);
@@ -77,12 +77,112 @@ public class MetanetNodeManager {
 	}
 
 	/**
+	 * @description: Get Txids of metanet data and parent of current node. For normal metanet node,
+	 * it must have OP_RETURN meta PubKey_node Txid_prarent, the payloads of normal metanet node can be empty,
+	 * but can't be null; However, for root metanet node, it must have OP_RETURN meta PubKey_root,
+	 * the payloads and parent_txid of root node is null
+	 * @param currentNode current metanet node
+	 * @date: 2019/06/22
+	 **/
+	public List<MetanetNodeData> getAndSetNodeDataList(MetanetNode currentNode, Integer limit) {
+		List<MetanetNodeData> dataList = new ArrayList<>();
+		String json = getMetaTxSentToCurrentNode(currentNode, limit);
+		// the newest data is current data, so start from unconfirmed tx to traverse from newest tx to oldest tx
+		try {
+			JsonNode unconfirmedTxsNode = objectMapper.readTree(json).at("/u");
+			parseTxJsonNodeIntoDataList(unconfirmedTxsNode, dataList, currentNode);
+			JsonNode confirmedTxsNode = objectMapper.readTree(json).at("/c");
+			parseTxJsonNodeIntoDataList(confirmedTxsNode, dataList, currentNode);
+		} catch (JsonProcessingException e) {
+			System.out.println("fail to parse json");
+			e.printStackTrace();
+		} catch (IOException e) {
+			System.out.println("fail to read json node");
+			e.printStackTrace();
+		}
+		currentNode.setDataList(dataList);
+		if (! dataList.isEmpty()) {
+			// todo: decide the version order of data by payload item, instead of confirmed time order
+			MetanetNodeData latestData = dataList.get(dataList.size() - 1);
+			currentNode.setCurrentVersion(latestData.getTxid());
+			currentNode.setCurrentData(latestData.getPayloads());
+		}
+		return dataList;
+	}
+
+	/**
+	 * @description: Get UTXO list belong to current node
+	 * @param currentNode current metanet node
+	 * @date: 2019/06/22
+	 **/
+	public List<MetanetNodeUTXO> getAndSetUTXOList(MetanetNode currentNode) {
+		String json = HttpRequestSender.getUtxoForBase64PubKey(currentNode.getPubKey(), params);
+		List<MetanetNodeUTXO> utxoList = gson.fromJson(json, new TypeToken<List<MetanetNodeUTXO>>(){}.getType());
+		currentNode.setUtxoList(utxoList);
+		return utxoList;
+	}
+
+	/**
+	 * @description: Count balance of current node
+	 * @param currentNode current metanet node
+	 * @date: 2019/06/22
+	 **/
+	public long countAndSetBalance(MetanetNode currentNode) {
+		if (currentNode.getUtxoList() == null) {
+			getAndSetUTXOList(currentNode);
+		}
+		long balance = 0;
+		for (MetanetNodeUTXO utxo : currentNode.getUtxoList()) {
+			balance += utxo.getValue();
+		}
+		currentNode.setBalance(balance);
+		return balance;
+	}
+
+	/**
+	 * @description: Get pubKeys of children of current node
+	 * @param currentNode current metanet node
+	 * @date: 2019/06/22
+	 **/
+	public List<MetanetNode> getAndSetChildrenNode(MetanetNode currentNode, Integer limit) {
+		LinkedHashSet<String> childrenPubKeySet = new LinkedHashSet<>();
+		String json = getMetaTxSentFromCurrentNode(currentNode, limit);
+		// need to traverse from oldest tx to newest tx, so start from confirmed transaction
+		try {
+			JsonNode confirmedTxsNode = objectMapper.readTree(json).at("/c");
+			parseTxJsonIntoChildrenPubKeySet(confirmedTxsNode, childrenPubKeySet);
+			JsonNode unconfirmedTxsNode = objectMapper.readTree(json).at("/u");
+			parseTxJsonIntoChildrenPubKeySet(unconfirmedTxsNode, childrenPubKeySet);
+		} catch (JsonProcessingException e) {
+			System.out.println("fail to parse json");
+			e.printStackTrace();
+		} catch (IOException e) {
+			System.out.println("fail to read json node");
+			e.printStackTrace();
+		}
+		List<MetanetNode> children = new ArrayList<>();
+		DeterministicKey parentKey = currentNode.getKey();
+		int indexOfChildPath = 0;
+		for (String childPubKey : childrenPubKeySet) {
+			// todo: decide the order of child node by data payload, instead of the confirmed time order.
+			String relativePath = String.format("/%d",indexOfChildPath);
+			DeterministicKey childKey = HDHierarchyKeyGenerator.deriveChildKeyByRelativePath(parentKey, relativePath);
+			MetanetNode child = new MetanetNode(childPubKey, childKey, currentNode);
+			children.add(child);
+			indexOfChildPath++;
+		}
+		currentNode.setChildren(children);
+		return children;
+	}
+
+
+	/**
 	 * @description: Get json of metanet format transactions sent to current metanet node.
 	 * @param currentNode current metanet node
 	 * @return json
 	 * @date: 2019/06/22
 	 **/
-	private String getMetaTxSentToCurrentNode(MetanetNode currentNode, Integer limit) throws IOException {
+	private String getMetaTxSentToCurrentNode(MetanetNode currentNode, Integer limit) {
 		PlanariaQueryUrlBuilder builder = new PlanariaQueryUrlBuilder();
 		String url = builder
 				.addOpReturn()
@@ -95,24 +195,48 @@ public class MetanetNodeManager {
 	}
 
 	/**
-	 * @description: Get Txids of metanet data and parent of current node. For normal metanet node,
-	 * it must have OP_RETURN meta PubKey_node Txid_prarent, the payloads of normal metanet node can be empty,
-	 * but can't be null; However, for root metanet node, it must have OP_RETURN meta PubKey_root,
-	 * the payloads and parent_txid of root node is null
+	 * @description: Get json of metanet format transactions sent from current metanet node.
 	 * @param currentNode current metanet node
+	 * @return json
 	 * @date: 2019/06/22
 	 **/
-	public List<MetanetNodeData> getAndSetNodeDataList(MetanetNode currentNode, Integer limit)
-			throws IOException {
-		List<MetanetNodeData> dataList = new ArrayList<>();
-		String json = getMetaTxSentToCurrentNode(currentNode, limit);
-		// the newest data is current data, so start from unconfirmed tx to traverse from newest tx to oldest tx
-		JsonNode unconfirmedTxsNode = objectMapper.readTree(json).at("/u");
-		parseTxJsonNodeIntoDataList(unconfirmedTxsNode, dataList, currentNode);
-		JsonNode confirmedTxsNode = objectMapper.readTree(json).at("/c");
-		parseTxJsonNodeIntoDataList(confirmedTxsNode, dataList, currentNode);
-		currentNode.setDataList(dataList);
-		return dataList;
+	private String getMetaTxSentFromCurrentNode(MetanetNode currentNode, Integer limit) {
+		PlanariaQueryUrlBuilder builder = new PlanariaQueryUrlBuilder();
+		String url = builder
+				.addOpReturn()
+				.addMetaFlag()
+				.addParentNodePubKey(currentNode.getPubKey())
+				.setQueryLimit(limit)
+				.buildUrl();
+		String json = HttpRequestSender.sendHttpRequestToPlanaria(url);
+		return json;
+	}
+
+	/**
+	 * @description: A common method to add pubKeys of children into a treeSet. It is able to buildRawTxHex
+	 * a metanet transaction with more than one metanet outputs, but each child can only have one output
+	 * @param txsNode jsonNode of uncomfirmed or comfired txs
+	 * @param childrenSet resluting set of children pubKeys
+	 * @date: 2019/06/22
+	 **/
+	private void parseTxJsonIntoChildrenPubKeySet(JsonNode txsNode, LinkedHashSet<String> childrenSet)
+			throws JsonProcessingException {
+		int txNodeNum = txsNode.size();
+		// reverse order
+		for (int i = txNodeNum - 1; i >= 0; i--) {
+			JsonNode txNode = txsNode.get(i);
+			JsonNode outputsNode = txNode.at("/out");
+			for (JsonNode output : outputsNode) {
+				JsonNode metaNode = output.at("/s1");
+				String metaFlag = metaNode.toString().isEmpty() ? null : objectMapper.treeToValue(metaNode, String.class);
+				if (metaFlag != null && metaFlag.equals(META)) {
+					String childPubKey = objectMapper.treeToValue(output.at("/b2"), String.class);
+					if (! childrenSet.contains(childPubKey)) {
+						childrenSet.add(childPubKey);
+					}
+				}
+			}
+		}
 	}
 
 	/**
@@ -159,109 +283,6 @@ public class MetanetNodeManager {
 				}
 			}
 			dataList.add(data);
-		}
-	}
-
-	/**
-	 * @description: Get UTXO list belong to current node
-	 * @param currentNode current metanet node
-	 * @date: 2019/06/22
-	 **/
-	public List<MetanetNodeUTXO> getAndSetUTXOList(MetanetNode currentNode) throws IOException {
-		String json = HttpRequestSender.getUtxoForBase64PubKey(currentNode.getPubKey(), params);
-		List<MetanetNodeUTXO> utxoList = gson.fromJson(json, new TypeToken<List<MetanetNodeUTXO>>(){}.getType());
-		currentNode.setUtxoList(utxoList);
-		return utxoList;
-	}
-
-	/**
-	 * @description: Count balance of current node
-	 * @param currentNode current metanet node
-	 * @date: 2019/06/22
-	 **/
-	public long countAndSetBalance(MetanetNode currentNode) throws IOException {
-		if (currentNode.getUtxoList() == null) {
-			getAndSetUTXOList(currentNode);
-		}
-		long balance = 0;
-		for (MetanetNodeUTXO utxo : currentNode.getUtxoList()) {
-			balance += utxo.getValue();
-		}
-		currentNode.setBalance(balance);
-		return balance;
-	}
-
-
-	/**
-	 * @description: Get json of metanet format transactions sent from current metanet node.
-	 * @param currentNode current metanet node
-	 * @return json
-	 * @date: 2019/06/22
-	 **/
-	private String getMetaTxSentFromCurrentNode(MetanetNode currentNode, Integer limit) throws IOException {
-		PlanariaQueryUrlBuilder builder = new PlanariaQueryUrlBuilder();
-		String url = builder
-				.addOpReturn()
-				.addMetaFlag()
-				.addParentNodePubKey(currentNode.getPubKey())
-				.setQueryLimit(limit)
-				.buildUrl();
-		String json = HttpRequestSender.sendHttpRequestToPlanaria(url);
-		return json;
-	}
-
-	/**
-	 * @description: Get pubKeys of children of current node
-	 * @param currentNode current metanet node
-	 * @date: 2019/06/22
-	 **/
-	public List<MetanetNode> getAndSetChildrenNode(MetanetNode currentNode, Integer limit) throws IOException {
-		LinkedHashSet<String> childrenPubKeySet = new LinkedHashSet<>();
-		String json = getMetaTxSentFromCurrentNode(currentNode, limit);
-		// need to traverse from oldest tx to newest tx, so start from confirmed transaction
-		JsonNode confirmedTxsNode = objectMapper.readTree(json).at("/c");
-		parseTxJsonIntoChildrenPubKeySet(confirmedTxsNode, childrenPubKeySet);
-		JsonNode unconfirmedTxsNode = objectMapper.readTree(json).at("/u");
-		parseTxJsonIntoChildrenPubKeySet(unconfirmedTxsNode, childrenPubKeySet);
-
-		List<MetanetNode> children = new ArrayList<>();
-		DeterministicKey parentKey = currentNode.getKey();
-		int indexOfChildPath = 0;
-		for (String childPubKey : childrenPubKeySet) {
-			String relativePath = String.format("/%d",indexOfChildPath);
-			DeterministicKey childKey = HDHierarchyKeyGenerator.deriveChildKeyByRelativePath(parentKey, relativePath);
-			MetanetNode child = new MetanetNode(childPubKey, childKey, currentNode);
-			children.add(child);
-			indexOfChildPath++;
-		}
-		currentNode.setChildren(children);
-		return children;
-	}
-
-	/**
-	 * @description: A common method to add pubKeys of children into a treeSet. It is able to buildRawTxHex
-	 * a metanet transaction with more than one metanet outputs, but each child can only have one output
-	 * @param txsNode jsonNode of uncomfirmed or comfired txs
-	 * @param childrenSet resluting set of children pubKeys
-	 * @date: 2019/06/22
-	 **/
-	private void parseTxJsonIntoChildrenPubKeySet(JsonNode txsNode, LinkedHashSet<String> childrenSet)
-			throws JsonProcessingException {
-		int txNodeNum = txsNode.size();
-		// reverse order
-		for (int i = txNodeNum - 1; i >= 0; i--) {
-			JsonNode txNode = txsNode.get(i);
-			JsonNode outputsNode = txNode.at("/out");
-			for (JsonNode output : outputsNode) {
-				JsonNode metaNode = output.at("/s1");
-				String metaFlag = metaNode.toString().isEmpty() ? null : objectMapper.treeToValue(metaNode, String.class);
-				if (metaFlag != null && metaFlag.equals(META)) {
-					String childPubKey = objectMapper.treeToValue(output.at("/b2"), String.class);
-					if (! childrenSet.contains(childPubKey)) {
-						childrenSet.add(childPubKey);
-					}
-				}
-			}
 		}
 	}
 }

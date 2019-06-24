@@ -3,11 +3,8 @@ package metanet.manager;
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import metanet.domain.MetanetNode;
 import metanet.utils.HDHierarchyKeyGenerator;
-import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.DeterministicKey;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +18,7 @@ public class MetanetTreeManager {
 
 	private MetanetEdgeManager edgeManager;
 
-	private static final long DUST_VALUE = 600L;
+	private static final long DUST_VALUE_SATOSHI = 600L;
 
 	private static final String DIR = "dir";
 
@@ -40,17 +37,17 @@ public class MetanetTreeManager {
 	 *              be regarded as dust output
 	 * @date: 2019/06/24
 	 **/
-	public MetanetNode createRootNode(MetanetNode pesudoParentNode, long value) throws
-			InsufficientMoneyException, IOException {
+	public MetanetNode createRootNode(MetanetNode pesudoParentNode, long value) {
+		nodeManager.getMetanetNodeInfo(pesudoParentNode);
 		MetanetNode rootNode = getNewAvailableChildNode(pesudoParentNode);
-		if (value >= DUST_VALUE) {
+		if (value >= DUST_VALUE_SATOSHI) {
 			edgeManager.buildMetanetRootNodeWithValue(pesudoParentNode, rootNode, value);
 		} else if (value == 0L) {
 			edgeManager.buildMetanetRootNodeWithoutValue(pesudoParentNode, rootNode);
 		} else {
 			System.out.println("value = 0 or value > 600");
 		}
-		return nodeManager.getMetanetNodeInfo(rootNode);
+		return rootNode;
 	}
 
 	/**
@@ -60,21 +57,20 @@ public class MetanetTreeManager {
 	 * @param value value send to the directory node, at least should be 600 satoshi
 	 * @date: 2019/06/24
 	 **/
-	public MetanetNode createDirNode(MetanetNode parentNode, String dirName, long value)
-			throws InsufficientMoneyException, IOException {
+	public MetanetNode createDirNode(MetanetNode parentNode, String dirName, long value) {
+		nodeManager.getMetanetNodeInfo(parentNode);
 		MetanetNode dirNode = getNewAvailableChildNode(parentNode);
 		// prepare payloads
 		List<String> payloads = new ArrayList<>();
 		payloads.add(DIR);
 		payloads.add(dirName);
 		// create edge from parent node to the new dir
-		if (value >= DUST_VALUE) {
+		if (value >= DUST_VALUE_SATOSHI) {
 			edgeManager.buildEdgeToMetanetNodeWithValue(parentNode, dirNode, payloads, value);
 		} else {
 			System.out.println("value = 0 or value > 600");
 		}
-		// get info of the new dir
-		return nodeManager.getMetanetNodeInfo(dirNode);
+		return dirNode;
 	}
 
 	/**
@@ -84,8 +80,8 @@ public class MetanetTreeManager {
 	 * @param fileContent contents store in the file node
 	 * @date: 2019/06/24
 	 **/
-	public MetanetNode createFileNode(MetanetNode parentNode, String fileName, List<String> fileContent)
-			throws InsufficientMoneyException, IOException {
+	public MetanetNode createFileNode(MetanetNode parentNode, String fileName, List<String> fileContent) {
+		nodeManager.getMetanetNodeInfo(parentNode);
 		MetanetNode fileNode = getNewAvailableChildNode(parentNode);
 		// prepare payloads
 		List<String> payloads = new ArrayList<>();
@@ -93,7 +89,7 @@ public class MetanetTreeManager {
 		payloads.add(fileName);
 		payloads.addAll(fileContent);
 		edgeManager.buildEdgeToMetanetNodeWithoutValue(parentNode, fileNode, payloads);
-		return nodeManager.getMetanetNodeInfo(fileNode);
+		return fileNode;
 	}
 
 	/**
@@ -104,13 +100,13 @@ public class MetanetTreeManager {
 	 * @param value if value = 0, means don't send value, if value != 0, it should at least 600 satoshi
 	 * @date: 2019/06/24
 	 **/
-	public MetanetNode editDirNode(MetanetNode parentNode, MetanetNode dirNode, String NewDirName, long value)
-			throws InsufficientMoneyException, IOException {
+	public MetanetNode editDirNode(MetanetNode parentNode, MetanetNode dirNode, String NewDirName, long value) {
+		nodeManager.getMetanetNodeInfo(parentNode);
 		List<String> payloads = new ArrayList<>();
 		payloads.add(DIR);
 		payloads.add(NewDirName);
 		// create edge from parent node to the new dir
-		if (value >= DUST_VALUE) {
+		if (value >= DUST_VALUE_SATOSHI) {
 			edgeManager.buildEdgeToMetanetNodeWithValue(parentNode, dirNode, payloads, value);
 		} else if (value == 0L) {
 			edgeManager.buildEdgeToMetanetNodeWithoutValue(parentNode, dirNode, payloads);
@@ -118,7 +114,7 @@ public class MetanetTreeManager {
 			System.out.println("value = 0 or value > 600");
 		}
 		// get info of the new dir
-		return nodeManager.getMetanetNodeInfo(dirNode);
+		return dirNode;
 	}
 
 	/**
@@ -130,27 +126,28 @@ public class MetanetTreeManager {
 	 * @date: 2019/06/24
 	 **/
 	public MetanetNode editFileNode(MetanetNode parentNode, MetanetNode fileNode, String newFileName
-			, List<String> newFileContent) throws InsufficientMoneyException, IOException {
+			, List<String> newFileContent) {
+		nodeManager.getMetanetNodeInfo(parentNode);
 		// prepare payloads
 		List<String> payloads = new ArrayList<>();
 		payloads.add(FILE);
 		payloads.add(newFileName);
 		payloads.addAll(newFileContent);
 		edgeManager.buildEdgeToMetanetNodeWithoutValue(parentNode, fileNode, payloads);
-		return nodeManager.getMetanetNodeInfo(fileNode);
+		return fileNode;
 	}
 
 	/**
 	 * @description: Change value to a existing directory node from other metanet-node or outer source
 	 * @param senderNode could be a meta-dir-node, or other source
-	 * @param dirNode the target directory node
+	 * @param receiverNode the target directory node
 	 * @param value value send to the directory node
 	 * @date: 2019/06/24
 	 **/
-	public MetanetNode sendValueToDirNode(MetanetNode senderNode, MetanetNode dirNode, long value)
-			throws InsufficientMoneyException, IOException {
-		edgeManager.sendMoneyFromNodeAToNodeB(senderNode, dirNode, value);
-		return nodeManager.getMetanetNodeInfo(dirNode);
+	public MetanetNode sendValueToNode(MetanetNode senderNode, MetanetNode receiverNode, long value) {
+		edgeManager.sendMoneyFromNodeAToNodeB(senderNode, receiverNode, value);
+		nodeManager.getMetanetNodeInfo(senderNode);
+		return receiverNode;
 	}
 
 	/**
@@ -161,7 +158,9 @@ public class MetanetTreeManager {
 	 **/
 	private MetanetNode getNewAvailableChildNode(MetanetNode parentNode) {
 		// get the available child index and child key
-		int indexOfDirNode = parentNode.getChildren().size();
+		nodeManager.getMetanetNodeInfo(parentNode);
+		List<MetanetNode> children = parentNode.getChildren();
+		int indexOfDirNode = children == null ? 0 : children.size();
 		String relativePathOfDirNode = String.format("/%d",indexOfDirNode);
 		DeterministicKey parentNodeKey = parentNode.getKey();
 		DeterministicKey dirNodeKey = HDHierarchyKeyGenerator.deriveChildKeyByRelativePath(parentNodeKey, relativePathOfDirNode);

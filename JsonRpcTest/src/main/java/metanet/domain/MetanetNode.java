@@ -1,5 +1,7 @@
 package metanet.domain;
 
+import org.bitcoinj.crypto.DeterministicKey;
+
 import java.util.List;
 
 /**
@@ -16,15 +18,13 @@ public class MetanetNode {
 	private String pubKey;
 
 	/**
-	 * @description: Path of current node in the HD hierarchy, which is used to retrieve private
-	 * key information from masterKey
-	 * @date: 2019/06/21
+	 * @description: privKey, pubKey and pathNum
+	 * @date: 2019/06/24
 	 **/
-	private String path;
+	private DeterministicKey key;
 
 	/**
 	 * @description: Balance of current address
-	 * @param null
 	 * @date: 2019/06/22
 	 **/
 	private long balance;
@@ -54,9 +54,9 @@ public class MetanetNode {
 	 **/
 	private List<MetanetNode> children;
 
-	public MetanetNode(String pubKey, String path, MetanetNode parent) {
+	public MetanetNode(String pubKey, DeterministicKey key, MetanetNode parent) {
 		this.pubKey = pubKey;
-		this.path = path;
+		this.key = key;
 		this.parent = parent;
 	}
 
@@ -68,16 +68,16 @@ public class MetanetNode {
 		this.pubKey = pubKey;
 	}
 
-	public String getPath() {
-		return path;
-	}
-
-	public void setPath(String path) {
-		this.path = path;
-	}
-
 	public long getBalance() {
 		return balance;
+	}
+
+	public DeterministicKey getKey() {
+		return key;
+	}
+
+	public void setKey(DeterministicKey key) {
+		this.key = key;
 	}
 
 	public void setBalance(long balance) {

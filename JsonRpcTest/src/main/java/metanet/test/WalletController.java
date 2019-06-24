@@ -1,4 +1,4 @@
-package metanet;
+package metanet.test;
 
 import com.google.common.base.Joiner;
 import org.bitcoinj.core.*;

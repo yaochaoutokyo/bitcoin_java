@@ -1,21 +1,16 @@
 package metanet.manager;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
-import metanet.RealTest;
 import metanet.domain.MetanetNode;
 import metanet.domain.MetanetNodeData;
 import metanet.domain.MetanetNodeUTXO;
 import metanet.utils.BsvTransactionBuilder;
-import metanet.utils.HDHierarchyKeyGenerator;
 import metanet.utils.HttpRequestSender;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.DeterministicKey;
-import org.bitcoinj.params.MainNetParams;
-
-import java.io.IOException;
 import java.util.*;
 
 /**
@@ -24,8 +19,6 @@ import java.util.*;
 public class MetanetEdgeManager {
 
 	private NetworkParameters params;
-
-	private DeterministicKey masterKey;
 
 	private static final long EXTRA_BYTES = 3L;
 
@@ -45,9 +38,8 @@ public class MetanetEdgeManager {
 
 	private long feePerByte = 1L;
 
-	public MetanetEdgeManager(DeterministicKey masterKey, NetworkParameters params) {
+	public MetanetEdgeManager(NetworkParameters params) {
 		this.params = params;
-		this.masterKey = masterKey;
 	}
 
 	/**
@@ -126,20 +118,20 @@ public class MetanetEdgeManager {
 	 * @param valueSendToChild value send to the address child node
 	 * @date: 2019/06/23
 	 **/
-	public String buildEdgeFromCurrentNodeToChild(MetanetNode parentNode, MetanetNode childNode, List<String> payloads
+	private String buildEdgeFromCurrentNodeToChild(MetanetNode parentNode, MetanetNode childNode, List<String> payloads
 			, long valueSendToChild, boolean isRoot) throws InsufficientMoneyException, IllegalArgumentException {
 
 		if (valueSendToChild != 0L && valueSendToChild < 600L) {
 			throw new IllegalArgumentException("dust output");
 		}
 		// prepare necessary information for build a transaction
-		DeterministicKey parentKey = HDHierarchyKeyGenerator.deriveChildKeyByAbsolutePath(masterKey, parentNode.getPath());
+		DeterministicKey parentKey = parentNode.getKey();
 		List<MetanetNodeUTXO> parentNodeUtxoList = parentNode.getUtxoList();
 		List<MetanetNodeData> parentNodeDataList = parentNode.getDataList();
 		// the newest data in the data list is the data tx of parent node
 		String parentNodeTxHash = parentNodeDataList.get(0).getTxid();
 		Address parentAddress = parentKey.toAddress(params);
-		DeterministicKey childKey = HDHierarchyKeyGenerator.deriveChildKeyByAbsolutePath(masterKey, childNode.getPath());
+		DeterministicKey childKey = childNode.getKey();
 		String base64ChildPubKey = Base64.encode(childKey.getPubKey());
 		Address childAddress = childKey.toAddress(params);
 
@@ -211,31 +203,5 @@ public class MetanetEdgeManager {
 				+ metaOutputFee + rootMetaOutputFee + payloadFee;
 		Coin txFee = Coin.SATOSHI.multiply(txFeeSum * feePerByte);
 		return txFee;
-	}
-
-	public static void main(String[] args) throws IOException, InsufficientMoneyException {
-		NetworkParameters params = MainNetParams.get();
-		List<String> mnemonics = Arrays.asList(new String[]{"forum", "rug", "slice", "snack", "width", "inside",
-				"mad", "cotton", "noodle", "april", "dumb", "adapt"});
-		String passphrase = "123456";
-		DeterministicKey masterKey = RealTest.restoreMasterKeyFromMnemonicCode(mnemonics,passphrase);
-		DeterministicKey parentKey = HDHierarchyKeyGenerator.deriveChildKeyByAbsolutePath(masterKey, "M");
-		MetanetNode parentNode = new MetanetNode(Base64.encode(parentKey.getPubKey()),"M", null);
-		MetanetNodeManager metanetNodeManager = new MetanetNodeManager(params);
-		metanetNodeManager.getMetanetTree(parentNode);
-//		MetanetNode childNode1 = new MetanetNode("A5TdWv85gj0rX/KteTu2aJi04QtbSu6zNtfbZlJhfGZc","M/1/0/0", parentNode);
-//		metanetNodeManager.getMetanetNodeInfo(childNode1);
-
-		MetanetNode childNode3 = new MetanetNode("","M/1/0/4", parentNode);
-		MetanetEdgeManager metanetEdgeManager = new MetanetEdgeManager(masterKey, params);
-		List<String> payloads = Arrays.asList(new String[]{"M/1/0/4", "without", "value"});
-//		metanetEdgeManager.buildEdgeToMetanetNodeWithValue(parentNode, childNode3, payloads, 1000);
-//		metanetEdgeManager.buildEdgeToMetanetNodeWithoutValue(parentNode, childNode3, payloads);
-//		metanetEdgeManager.buildMetanetRootNodeWithoutValue(parentNode, childNode3);
-//		metanetEdgeManager.buildMetanetRootNodeWithValue(parentNode, childNode3, 800);
-		metanetEdgeManager.sendMoneyFromNodeAToNodeB(parentNode, childNode3, 500);
-//		MetanetNode childNode3 = new MetanetNode("", "M/1/0/2", parentNode);
-//		MetanetNode childNode4 = new MetanetNode("", "M/1/0/3", parentNode);
-
 	}
 }

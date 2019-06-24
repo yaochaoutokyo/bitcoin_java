@@ -34,7 +34,7 @@ public class HDHierarchyKeyGenerator {
 	public static DeterministicKey deriveChildKeyByRelativePath(DeterministicKey parentKey, String relativePath) {
 		DeterministicHierarchy hierarchy = new DeterministicHierarchy(parentKey);
 		List<ChildNumber> numbers = HDUtils.parsePath(relativePath);
-		DeterministicKey childKey = hierarchy.get(numbers, false, true);
+		DeterministicKey childKey = hierarchy.get(numbers, true, true);
 		return childKey;
 	}
 }

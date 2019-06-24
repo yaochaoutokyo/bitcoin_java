@@ -8,10 +8,11 @@ import com.google.gson.reflect.TypeToken;
 import metanet.domain.MetanetNode;
 import metanet.domain.MetanetNodeData;
 import metanet.domain.MetanetNodeUTXO;
+import metanet.utils.HDHierarchyKeyGenerator;
 import metanet.utils.PlanariaQueryUrlBuilder;
 import metanet.utils.HttpRequestSender;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.crypto.DeterministicKey;
 
 import java.io.IOException;
 import java.util.*;
@@ -224,10 +225,12 @@ public class MetanetNodeManager {
 		parseTxJsonIntoChildrenPubKeySet(unconfirmedTxsNode, childrenPubKeySet);
 
 		List<MetanetNode> children = new ArrayList<>();
+		DeterministicKey parentKey = currentNode.getKey();
 		int indexOfChildPath = 0;
 		for (String childPubKey : childrenPubKeySet) {
-			String childPath = String.format("%s/%s", currentNode.getPath(), indexOfChildPath);
-			MetanetNode child = new MetanetNode(childPubKey, childPath, currentNode);
+			String relativePath = String.format("/%d",indexOfChildPath);
+			DeterministicKey childKey = HDHierarchyKeyGenerator.deriveChildKeyByRelativePath(parentKey, relativePath);
+			MetanetNode child = new MetanetNode(childPubKey, childKey, currentNode);
 			children.add(child);
 			indexOfChildPath++;
 		}
@@ -257,18 +260,8 @@ public class MetanetNodeManager {
 					if (! childrenSet.contains(childPubKey)) {
 						childrenSet.add(childPubKey);
 					}
-
 				}
 			}
 		}
-	}
-
-	public static void main(String[] args) throws Exception {
-		NetworkParameters params = MainNetParams.get();
-		MetanetNodeManager metanetNodeManager = new MetanetNodeManager(params);
-		MetanetNode currentNode = new MetanetNode("A4QtyIYcWnnpK6D+4j0uNNi6m/buRjPhNnEMYl22E0gs", "M",null);
-		String json = metanetNodeManager.getMetaTxSentFromCurrentNode(currentNode, 10);
-		metanetNodeManager.getMetanetNodeInfo(currentNode);
-		System.out.println(json);
 	}
 }

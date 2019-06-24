@@ -1,4 +1,4 @@
-package metanet;
+package metanet.test;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;

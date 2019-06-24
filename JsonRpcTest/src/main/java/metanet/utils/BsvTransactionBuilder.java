@@ -1,20 +1,12 @@
 package metanet.utils;
 
-import metanet.RealTest;
-import metanet.domain.MetanetNode;
 import metanet.domain.MetanetNodeUTXO;
-import metanet.manager.MetanetNodeManager;
 import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptOpCodes;
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
-
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.bitcoinj.core.Utils.HEX;
@@ -132,41 +124,5 @@ public class BsvTransactionBuilder {
 	public String buildRawTxHex() {
 		String txHex = HEX.encode(tx.bitcoinSerialize());
 		return txHex;
-	}
-
-	public static void main(String[] args) throws Exception {
-		NetworkParameters params = MainNetParams.get();
-		MetanetNodeManager metanetNodeManager = new MetanetNodeManager(params);
-		MetanetNode currentNode = new MetanetNode("Ah92lnR275QO2nvCHIrzFO4dGJbB1bY1RSEnTSCL5kzn", "M/1",null);
-		metanetNodeManager.getMetanetNodeInfo(currentNode);
-
-		List<String> mnemonics = Arrays.asList(new String[]{"forum", "rug", "slice", "snack", "width", "inside",
-				"mad", "cotton", "noodle", "april", "dumb", "adapt"});
-		String passphrase = "123456";
-		DeterministicKey masterKey = RealTest.restoreMasterKeyFromMnemonicCode(mnemonics,passphrase);
-		DeterministicKey currentKey = RealTest.deriveChildKeyByPath(masterKey, currentNode.getPath());
-		DeterministicKey currentKey1 = HDHierarchyKeyGenerator.deriveChildKeyByRelativePath(masterKey, "/1");
-		System.out.println(Base64.encode(currentKey.getPubKey()));
-		System.out.println(Base64.encode(currentKey1.getPubKey()));
-
-		BsvTransactionBuilder txBuilder = new BsvTransactionBuilder(params);
-		List<MetanetNodeUTXO> currentNodeUtxoList = currentNode.getUtxoList();
-		Coin currentNodeBalance = Coin.SATOSHI.multiply(currentNode.getBalance());
-		Coin valueSendToChildNode = Coin.SATOSHI.multiply(5000);
-		Coin txFee = Coin.SATOSHI.multiply(326);
-		List<String> payloads = new ArrayList<>();
-		payloads.add("M/1/0");
-		payloads.add("test");
-		payloads.add("1");
-		DeterministicKey childkey2 = RealTest.deriveChildKeyByPath(masterKey, "M/1/1");
-		String txHex = txBuilder
-				.addMetanetChildNodeOutput(Base64.encode(childkey2.getPubKey()),currentNodeUtxoList.get(0).getTxid(), payloads)
-				.addP2PKHOutput(childkey2.toAddress(params), valueSendToChildNode)
-				.addP2PKHOutput(currentKey.toAddress(params), currentNodeBalance.subtract(valueSendToChildNode).subtract(txFee))
-				.addSignedInputs(currentNodeUtxoList, childkey2)
-				.buildRawTxHex();
-		RealTest.decode(txHex);
-//		RealTest.broadcast(txHex);
-		System.out.println("....");
 	}
 }

@@ -116,11 +116,12 @@ public class MetanetEdgeManager {
 	 * @description: create a root node from a pseudo-parent node without any value transforming
 	 * @param pseudoParentNode Imaginary node which send a matenet-root format transaction to root node
 	 * @param rootNode root node
+	 * @param payloads data store in root node
 	 * @return Txid
 	 * @date: 2019/06/23
 	 **/
-	public String buildMetanetRootNodeWithoutValue(MetanetNode pseudoParentNode, MetanetNode rootNode) {
-		return buildEdgeFromCurrentNodeToChild(pseudoParentNode, rootNode, null, 0, true);
+	public String buildMetanetRootNodeWithoutValue(MetanetNode pseudoParentNode, MetanetNode rootNode, List<String> payloads) {
+		return buildEdgeFromCurrentNodeToChild(pseudoParentNode, rootNode, payloads, 0, true);
 	}
 
 	/**
@@ -128,12 +129,13 @@ public class MetanetEdgeManager {
 	 * @param pseudoParentNode Imaginary node which send a matenet-root format transaction to root node
 	 * @param rootNode root node
 	 * @param valueSendToRoot value send to root node
+	 * @param payloads data store in root node
 	 * @return Txid
 	 * @date: 2019/06/23
 	 **/
-	public String buildMetanetRootNodeWithValue(MetanetNode pseudoParentNode, MetanetNode rootNode
+	public String buildMetanetRootNodeWithValue(MetanetNode pseudoParentNode, MetanetNode rootNode, List<String> payloads
 			, long valueSendToRoot) {
-		return buildEdgeFromCurrentNodeToChild(pseudoParentNode, rootNode, null, valueSendToRoot, true);
+		return buildEdgeFromCurrentNodeToChild(pseudoParentNode, rootNode, payloads, valueSendToRoot, true);
 	}
 
 	public String sendMoneyFromNodeAToNodeB(MetanetNode nodeA, MetanetNode nodeB, long value) {
@@ -171,7 +173,7 @@ public class MetanetEdgeManager {
 		// add metanet-format OP_RETURN output
 		BsvTransactionBuilder txBuilder = new BsvTransactionBuilder(params);
 		if (isRoot) {
-			txBuilder.addMetanetRootNodeOutput(base64ChildPubKey);
+			txBuilder.addMetanetRootNodeOutput(base64ChildPubKey, payloads);
 		} else if (payloads != null) {
 			String currentParentNodeDataHash = parentNode.getCurrentVersion();
 			txBuilder.addMetanetChildNodeOutput(base64ChildPubKey, currentParentNodeDataHash, payloads);

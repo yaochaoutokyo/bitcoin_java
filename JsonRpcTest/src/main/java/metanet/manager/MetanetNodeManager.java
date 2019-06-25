@@ -8,7 +8,6 @@ import com.google.gson.reflect.TypeToken;
 import metanet.domain.MetanetNode;
 import metanet.domain.MetanetNodeData;
 import metanet.domain.MetanetNodeUTXO;
-import metanet.utils.HDHierarchyKeyGenerator;
 import metanet.utils.PlanariaQueryUrlBuilder;
 import metanet.utils.HttpRequestSender;
 import org.bitcoinj.core.NetworkParameters;
@@ -165,8 +164,7 @@ public class MetanetNodeManager {
 		int indexOfChildPath = 0;
 		for (String childPubKey : childrenPubKeySet) {
 			// todo: decide the order of child node by data payload, instead of the confirmed time order.
-			String relativePath = String.format("/%d",indexOfChildPath);
-			DeterministicKey childKey = HDHierarchyKeyGenerator.deriveChildKeyByRelativePath(parentKey, relativePath);
+			DeterministicKey childKey = parentKey.derive(indexOfChildPath);
 			MetanetNode child = new MetanetNode(childPubKey, childKey, currentNode);
 			children.add(child);
 			indexOfChildPath++;
@@ -271,8 +269,8 @@ public class MetanetNodeManager {
 							String nextPayloadNodePath = String.format("/s%s", ++index);
 							payLoadNode = output.at(nextPayloadNodePath);
 						}
-						// root node don't have parentTxid, it can distinguish root node with this feature
-						if (! parentTxid.isEmpty()) {
+						// the parentTxid of root node is NULL, it can distinguish root node with this feature
+						if (! parentTxid.equals("NULL")) {
 							// if the node have parentTxid, set payloads, otherwise, leave payloads as null
 							data.setPayloads(payloads);
 						}

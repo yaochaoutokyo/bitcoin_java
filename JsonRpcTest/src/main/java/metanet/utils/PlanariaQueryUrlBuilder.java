@@ -10,14 +10,14 @@ import java.util.ArrayList;
  **/
 public class PlanariaQueryUrlBuilder {
 
-	private ArrayList<String> conditions;
+	private ArrayList<String> findConditions;
 
 	private static final String PLANARIA_QUERY_URL = "http://52.199.36.243:3000/q/1KWqy2WbNpEPC7hwvfJbvXy2vekS2LwGim/";
 
 	private String limitCondition = ",{\"limit\": %d}";
 
 	public PlanariaQueryUrlBuilder() {
-		conditions = new ArrayList<>();
+		findConditions = new ArrayList<>();
 	}
 
 	/**
@@ -25,7 +25,7 @@ public class PlanariaQueryUrlBuilder {
 	 * @date: 2019/06/22
 	 **/
 	public PlanariaQueryUrlBuilder addOpReturn() {
-		conditions.add("\"out.b0.op\":106");
+		findConditions.add("\"out.b0.op\":106");
 		return this;
 	}
 
@@ -34,7 +34,7 @@ public class PlanariaQueryUrlBuilder {
 	 * @date: 2019/06/22
 	 **/
 	public PlanariaQueryUrlBuilder addMetaFlag() {
-		conditions.add("\"out.s1\":\"meta\"");
+		findConditions.add("\"out.s1\":\"meta\"");
 		return this;
 	}
 
@@ -45,7 +45,7 @@ public class PlanariaQueryUrlBuilder {
 	 **/
 	public PlanariaQueryUrlBuilder addParentNodePubKey(String parentPubKey) {
 		String condition = String.format("\"in.b1\":\"%s\"", parentPubKey);
-		conditions.add(condition);
+		findConditions.add(condition);
 		return this;
 	}
 
@@ -56,7 +56,7 @@ public class PlanariaQueryUrlBuilder {
 	 **/
 	public PlanariaQueryUrlBuilder addChildNodePubKeyScript(String childPubKey) {
 		String condition = String.format("\"out.s2\":\"%s\"", childPubKey);
-		conditions.add(condition);
+		findConditions.add(condition);
 		return this;
 	}
 
@@ -81,9 +81,9 @@ public class PlanariaQueryUrlBuilder {
 	public String buildUrl() {
 
 		StringBuilder stringBuilder = new StringBuilder();
-		for (int i = 0; i < conditions.size(); i++) {
-			stringBuilder.append(conditions.get(i));
-			if (i != conditions.size() - 1) {
+		for (int i = 0; i < findConditions.size(); i++) {
+			stringBuilder.append(findConditions.get(i));
+			if (i != findConditions.size() - 1) {
 				stringBuilder.append(",");
 			}
 		}

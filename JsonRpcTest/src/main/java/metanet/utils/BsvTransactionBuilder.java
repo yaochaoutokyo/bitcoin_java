@@ -19,11 +19,11 @@ public class BsvTransactionBuilder {
 
 	private Transaction tx;
 
-	private TransactionOutput changeOutput;
-
 	private NetworkParameters params;
 
-	private static final byte[] METANET_FLAG = HEX.decode("6d657461");
+	private static final String META = "meta";
+
+	private static final String NULL = "NULL";
 
 	public BsvTransactionBuilder(NetworkParameters params) {
 		this.params = params;
@@ -47,13 +47,8 @@ public class BsvTransactionBuilder {
 	 * @param base64RootPubKey Base64 format of PubKey of root metanet node
 	 * @date: 2019/06/23
 	 **/
-	public BsvTransactionBuilder addMetanetRootNodeOutput(String base64RootPubKey) {
-		Script metanetRootOutputScript = new ScriptBuilder()
-				.op(ScriptOpCodes.OP_RETURN)
-				.data(METANET_FLAG)
-				.data(base64RootPubKey.getBytes())
-				.build();
-		tx.addOutput(Coin.ZERO, metanetRootOutputScript);
+	public BsvTransactionBuilder addMetanetRootNodeOutput(String base64RootPubKey, List<String> payloads) {
+		addMetanetChildNodeOutput(base64RootPubKey, NULL, payloads);
 		return this;
 	}
 
@@ -70,7 +65,7 @@ public class BsvTransactionBuilder {
 		// Build the head of Metanet output
 		ScriptBuilder payloadBuilder = new ScriptBuilder()
 				.op(ScriptOpCodes.OP_RETURN)
-				.data(METANET_FLAG)
+				.data(META.getBytes())
 				.data(base64ChildPubKey.getBytes())
 				.data(parentNodeTxid.getBytes());
 		// put payloads into Metanet output

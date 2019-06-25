@@ -8,6 +8,7 @@ import java.util.List;
  * @date: 2019/06/21
  **/
 public class MetanetNodeData {
+
 	/**
 	 * @description: Id of transaction which contains metanet_flag output
 	 * @date: 2019/06/21

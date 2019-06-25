@@ -38,13 +38,34 @@ public class MetanetTreeManager {
 	 *              be regarded as dust output
 	 * @date: 2019/06/24
 	 **/
-	public MetanetNode createRootNode(MetanetNode pesudoParentNode, long value) {
+	public MetanetNode createRootNode(MetanetNode pesudoParentNode, List<String> payloads, long value) {
 		nodeManager.getMetanetNodeInfo(pesudoParentNode);
 		MetanetNode rootNode = getNewAvailableChildNode(pesudoParentNode);
 		if (value >= DUST_VALUE_SATOSHI) {
-			edgeManager.buildMetanetRootNodeWithValue(pesudoParentNode, rootNode, value);
+			edgeManager.buildMetanetRootNodeWithValue(pesudoParentNode, rootNode, payloads, value);
 		} else if (value == 0L) {
-			edgeManager.buildMetanetRootNodeWithoutValue(pesudoParentNode, rootNode);
+			edgeManager.buildMetanetRootNodeWithoutValue(pesudoParentNode, rootNode, payloads);
+		} else {
+			System.out.println("value = 0 or value > 600");
+		}
+		return rootNode;
+	}
+
+	/**
+	 * @description: Edit a root node
+	 * @param pesudoParentNode imaginary parent node
+	 * @param rootNode existing root node
+	 * @param value value send to root node, if value equals to zero, means only create root node
+	 *              if value doesn't equal to zero, it should at least 600 satoshi, otherwise it will
+	 *              be regarded as dust output
+	 * @date: 2019/06/26
+	 **/
+	public MetanetNode editRootNode(MetanetNode pesudoParentNode, MetanetNode rootNode, List<String> payloads, long value) {
+		nodeManager.getMetanetNodeInfo(pesudoParentNode);
+		if (value >= DUST_VALUE_SATOSHI) {
+			edgeManager.buildMetanetRootNodeWithValue(pesudoParentNode, rootNode, payloads, value);
+		} else if (value == 0L) {
+			edgeManager.buildMetanetRootNodeWithoutValue(pesudoParentNode, rootNode, payloads);
 		} else {
 			System.out.println("value = 0 or value > 600");
 		}
@@ -58,19 +79,47 @@ public class MetanetTreeManager {
 	 * @param value value send to the directory node, at least should be 600 satoshi
 	 * @date: 2019/06/24
 	 **/
-	public MetanetNode createDirNode(MetanetNode parentNode, String dirName, long value) {
+	public MetanetNode createDirNode(MetanetNode parentNode, String dirName, List<String> dirContents, long value) {
 		nodeManager.getMetanetNodeInfo(parentNode);
 		MetanetNode dirNode = getNewAvailableChildNode(parentNode);
 		// prepare payloads
 		List<String> payloads = new ArrayList<>();
 		payloads.add(DIR);
 		payloads.add(dirName);
+		payloads.addAll(dirContents);
 		// create edge from parent node to the new dir
 		if (value >= DUST_VALUE_SATOSHI) {
 			edgeManager.buildEdgeToMetanetNodeWithValue(parentNode, dirNode, payloads, value);
 		} else {
 			System.out.println("value = 0 or value > 600");
 		}
+		return dirNode;
+	}
+
+	/**
+	 * @description: Edit a existing directory node
+	 * @param parentNode parent node of the directory node, only the parent node can modify its child node
+	 * @param dirNode the directory node which are going to be edited
+	 * @param NewDirName new directory name
+	 * @param value if value = 0, means don't send value, if value != 0, it should at least 600 satoshi
+	 * @date: 2019/06/24
+	 **/
+	public MetanetNode editDirNode(MetanetNode parentNode, MetanetNode dirNode, String NewDirName
+			, List<String> dirContents, long value) {
+		nodeManager.getMetanetNodeInfo(parentNode);
+		List<String> payloads = new ArrayList<>();
+		payloads.add(DIR);
+		payloads.add(NewDirName);
+		payloads.addAll(dirContents);
+		// create edge from parent node to the new dir
+		if (value >= DUST_VALUE_SATOSHI) {
+			edgeManager.buildEdgeToMetanetNodeWithValue(parentNode, dirNode, payloads, value);
+		} else if (value == 0L) {
+			edgeManager.buildEdgeToMetanetNodeWithoutValue(parentNode, dirNode, payloads);
+		} else {
+			System.out.println("value = 0 or value > 600");
+		}
+		// get info of the new dir
 		return dirNode;
 	}
 
@@ -91,31 +140,6 @@ public class MetanetTreeManager {
 		payloads.addAll(fileContent);
 		edgeManager.buildEdgeToMetanetNodeWithoutValue(parentNode, fileNode, payloads);
 		return fileNode;
-	}
-
-	/**
-	 * @description: Edit a existing directory node
-	 * @param parentNode parent node of the directory node, only the parent node can modify its child node
-	 * @param dirNode the directory node which are going to be edited
-	 * @param NewDirName new directory name
-	 * @param value if value = 0, means don't send value, if value != 0, it should at least 600 satoshi
-	 * @date: 2019/06/24
-	 **/
-	public MetanetNode editDirNode(MetanetNode parentNode, MetanetNode dirNode, String NewDirName, long value) {
-		nodeManager.getMetanetNodeInfo(parentNode);
-		List<String> payloads = new ArrayList<>();
-		payloads.add(DIR);
-		payloads.add(NewDirName);
-		// create edge from parent node to the new dir
-		if (value >= DUST_VALUE_SATOSHI) {
-			edgeManager.buildEdgeToMetanetNodeWithValue(parentNode, dirNode, payloads, value);
-		} else if (value == 0L) {
-			edgeManager.buildEdgeToMetanetNodeWithoutValue(parentNode, dirNode, payloads);
-		} else {
-			System.out.println("value = 0 or value > 600");
-		}
-		// get info of the new dir
-		return dirNode;
 	}
 
 	/**

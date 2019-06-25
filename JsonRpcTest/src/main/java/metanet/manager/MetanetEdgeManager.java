@@ -29,9 +29,9 @@ public class MetanetEdgeManager {
 
 	private static final long BYTES_PER_OUTPUT = 34L;
 
-	private static final long BYTES_PER_EMPTY_META_OUTPUT = 81L;
+	private static final long BYTES_PER_EMPTY_META_OUTPUT = 124L;
 
-	private static final long BYTES_ROOT_META_OUTPUT = 48L;
+	private static final long BYTES_ROOT_META_OUTPUT = 59L;
 
 	private static final long BYTES_PER_CHAR = 1L;
 

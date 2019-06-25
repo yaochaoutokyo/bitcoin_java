@@ -6,7 +6,6 @@ import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptOpCodes;
-import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import java.util.List;
 
 import static org.bitcoinj.core.Utils.HEX;
@@ -47,11 +46,10 @@ public class BsvTransactionBuilder {
 	 * @date: 2019/06/23
 	 **/
 	public BsvTransactionBuilder addMetanetRootNodeOutput(String base64RootPubKey) {
-		byte[] childNodePubKey = Base64.decode(base64RootPubKey);
 		Script metanetRootOutputScript = new ScriptBuilder()
 				.op(ScriptOpCodes.OP_RETURN)
 				.data(METANET_FLAG)
-				.data(childNodePubKey)
+				.data(base64RootPubKey.getBytes())
 				.build();
 		tx.addOutput(Coin.ZERO, metanetRootOutputScript);
 		return this;
@@ -67,14 +65,12 @@ public class BsvTransactionBuilder {
 	 **/
 	public BsvTransactionBuilder addMetanetChildNodeOutput(String base64ChildPubKey
 			, String parentNodeTxid, List<String> payloads) {
-		Sha256Hash parentNodeTxidHash = Sha256Hash.wrap(parentNodeTxid);
-		byte[] childNodePubKey = Base64.decode(base64ChildPubKey);
 		// Build the head of Metanet output
 		ScriptBuilder payloadBuilder = new ScriptBuilder()
 				.op(ScriptOpCodes.OP_RETURN)
 				.data(METANET_FLAG)
-				.data(childNodePubKey)
-				.data(parentNodeTxidHash.getBytes());
+				.data(base64ChildPubKey.getBytes())
+				.data(parentNodeTxid.getBytes());
 		// put payloads into Metanet output
 		for (String payload : payloads) {
 			payloadBuilder.data(payload.getBytes());

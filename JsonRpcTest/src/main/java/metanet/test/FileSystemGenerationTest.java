@@ -28,12 +28,9 @@ public class FileSystemGenerationTest {
 				, "cousin", "remove", "poet", "negative", "live", "reward", "hurdle"});
 		String passphrase = "yc19931012";
 		DeterministicKey originKey = HDHierarchyKeyGenerator.restoreMasterKeyFromMnemonicCode(newMnemonics, passphrase);
-		MetanetNode originNode = new MetanetNode(Base64.encode(originKey.getPubKey()), originKey, null);
-//		nodeManager.getMetanetTree(originNode);
-
-		DeterministicKey yaochaoUserFileKey = HDHierarchyKeyGenerator.deriveChildKeyByAbsolutePath(originKey, "M/0/2/2");
-		// A+AKcGXGuKzJiMXRirTboCG/9lb278UvdtykM8/1+pPH
-		System.out.println(Base64.encode(yaochaoUserFileKey.getPubKey()));
+		DeterministicKey rootKey = HDHierarchyKeyGenerator.deriveChildKeyByAbsolutePath(originKey, "M/1");
+		MetanetNode rootNode = new MetanetNode(Base64.encode(rootKey.getPubKey()), originKey, null);
+		nodeManager.getMetanetTree(rootNode);
 
 		System.out.println("...");
 //		MetanetNode passwdDirNode = treeManager.createDirNode(rootNode,"passwd", 3000);

@@ -55,7 +55,7 @@ public class PlanariaQueryUrlBuilder {
 	 * @date: 2019/06/22
 	 **/
 	public PlanariaQueryUrlBuilder addChildNodePubKeyScript(String childPubKey) {
-		String condition = String.format("\"out.b2\":\"%s\"", childPubKey);
+		String condition = String.format("\"out.s2\":\"%s\"", childPubKey);
 		conditions.add(condition);
 		return this;
 	}

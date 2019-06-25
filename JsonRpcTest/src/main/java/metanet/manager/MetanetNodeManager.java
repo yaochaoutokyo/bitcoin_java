@@ -230,7 +230,7 @@ public class MetanetNodeManager {
 				JsonNode metaNode = output.at("/s1");
 				String metaFlag = metaNode.toString().isEmpty() ? null : objectMapper.treeToValue(metaNode, String.class);
 				if (metaFlag != null && metaFlag.equals(META)) {
-					String childPubKey = objectMapper.treeToValue(output.at("/b2"), String.class);
+					String childPubKey = objectMapper.treeToValue(output.at("/s2"), String.class);
 					if (! childrenSet.contains(childPubKey)) {
 						childrenSet.add(childPubKey);
 					}
@@ -259,8 +259,8 @@ public class MetanetNodeManager {
 				JsonNode metaNode = output.at("/s1");
 				String metaFlag = metaNode.toString().isEmpty() ? null : objectMapper.treeToValue(metaNode, String.class);
 				if (metaFlag != null && metaFlag.equals(META)) {
-					String childPubKey = objectMapper.treeToValue(output.at("/b2"), String.class);
-					String parentTxid = output.at("/b3").toString();
+					String childPubKey = objectMapper.treeToValue(output.at("/s2"), String.class);
+					String parentTxid = output.at("/s3").toString();
 					if (currentNode.getPubKey().equals(childPubKey)) {
 						List<String> payloads = new ArrayList<>();
 						JsonNode payLoadNode = output.at("/s4");

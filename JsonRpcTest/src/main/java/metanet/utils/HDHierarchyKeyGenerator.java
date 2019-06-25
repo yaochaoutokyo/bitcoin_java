@@ -8,8 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by yaochao on 2019/06/23
- */
+ * @description: Util for deal with HD key tree
+ * @author YAO Chao
+ * @date: 2019/06/25
+ **/
 public class HDHierarchyKeyGenerator {
 
 	/**

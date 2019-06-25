@@ -13,31 +13,64 @@ import org.bitcoinj.crypto.DeterministicKey;
 import java.util.*;
 
 /**
- * Created by yaochao on 2019/06/22
- */
+ * @description: class for build edge from parent node to child node
+ * @author YAO Chao
+ * @date: 2019/06/25
+ **/
 public class MetanetEdgeManager {
 
 	private NetworkParameters params;
 
+	/**
+	 * minimum amount of output value
+	 */
 	private static final long DUST_VALUE_SATOSHI = 600L;
 
+	/**
+	 * extra byte to ensure txFee is enough
+	 */
 	private static final long EXTRA_BYTES = 3L;
 
+	/**
+	 * initial length of a transaction
+	 */
 	private static final long INITIAL_LENGTH_BYTES = 10L;
 
+	/**
+	 * bytes per input
+	 */
 	private static final long BYTES_PER_INPUT = 148L;
 
+	/**
+	 * bytes per output
+	 */
 	private static final long BYTES_PER_OUTPUT = 34L;
 
+	/**
+	 * bytes per empty metanet output
+	 */
 	private static final long BYTES_PER_EMPTY_META_OUTPUT = 124L;
 
+	/**
+	 * bytes per root meta output
+	 */
 	private static final long BYTES_ROOT_META_OUTPUT = 59L;
 
+	/**
+	 * 1 char is 1 byte
+	 */
 	private static final long BYTES_PER_CHAR = 1L;
 
+	/**
+	 * 1 space is 1 byte
+	 */
 	private static final long BYTES_PER_SPACE = 1L;
 
+	/**
+	 * fee rate for per byte
+	 */
 	private long feePerByte = 1L;
+
 
 	public MetanetEdgeManager(NetworkParameters params) {
 		this.params = params;

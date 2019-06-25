@@ -9,9 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by yaochao on 2019/06/23
- * @author yaochao
- */
+ * @description: Class for managing metanet tree
+ * @author YAO Chao
+ * @date: 2019/06/25
+ **/
 public class MetanetTreeManager {
 
 	private MetanetNodeManager nodeManager;

@@ -11,8 +11,10 @@ import java.util.List;
 import static org.bitcoinj.core.Utils.HEX;
 
 /**
- * Created by yaochao on 2019/06/22
- */
+ * @description: class for building bsv transaction
+ * @author YAO Chao
+ * @date: 2019/06/25
+ **/
 public class BsvTransactionBuilder {
 
 	private Transaction tx;

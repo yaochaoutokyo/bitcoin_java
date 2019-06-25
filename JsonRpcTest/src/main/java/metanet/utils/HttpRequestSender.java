@@ -11,8 +11,10 @@ import wf.bitcoin.javabitcoindrpcclient.BitcoinRPCException;
 import java.io.IOException;
 
 /**
- * @author yaochao
- */
+ * @description: Util for dealing with Http request
+ * @author YAO Chao
+ * @date: 2019/06/25
+ **/
 public class HttpRequestSender {
 
 	private static OkHttpClient okHttpClient;

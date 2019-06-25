@@ -5,7 +5,7 @@ import org.bitcoinj.crypto.DeterministicKey;
 import java.util.List;
 
 /**
- * @description: Class for Metanet node, which is used to store data about current node
+ * @description: Fundamental class for Metanet node, which is used to store data about current node
  * @author YAO Chao
  * @date: 2019/06/21
  **/

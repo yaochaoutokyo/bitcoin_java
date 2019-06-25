@@ -1,8 +1,10 @@
 package metanet.domain;
 
 /**
- * Created by yaochao on 2019/06/19
- */
+ * @description: Metanet node utxo class
+ * @author YAO Chao
+ * @date: 2019/06/25
+ **/
 public class MetanetNodeUTXO {
 
 	/**

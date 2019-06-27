@@ -1,7 +1,9 @@
 package metanet.domain;
 
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.DeterministicKey;
 
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -12,16 +14,28 @@ import java.util.List;
 public class MetanetNode {
 
 	/**
-	 * @description: base64 format of pubKey of current node
-	 * @date: 2019/06/21
+	 * @description: address of current node
+	 * @date: 2019/06/27
+	 **/
+	private String address;
+
+	/**
+	 * @description: pubKey of current node
 	 **/
 	private String pubKey;
 
 	/**
-	 * @description: privKey, pubKey and pathNum
+	 * @description: the latest txid of meta-output
 	 * @date: 2019/06/24
 	 **/
-	private DeterministicKey key;
+	private String version;
+
+
+	/**
+	 * @description: the latest content of data
+	 * @date: 2019/06/24
+	 **/
+	private List<String> data;
 
 	/**
 	 * @description: Balance of current address
@@ -30,23 +44,17 @@ public class MetanetNode {
 	private long balance;
 
 	/**
-	 * @description: the latest txid of meta-output
+	 * @description: privKey, pubKey and pathNum
 	 * @date: 2019/06/24
 	 **/
-	private String currentVersion;
+	private DeterministicKey key;
 
 	/**
-	 * @description: the latest content of data
-	 * @date: 2019/06/24
-	 **/
-	private List<String> currentData;
-
-	/**
-	 * @description: Transaction data which contain the OP_RETURN data, the first one in the list
-	 * is the latest version of the data, we can edit data through changing the version of data
+	 * @description: Transaction data which contain the OP_RETURN data, we can edit data
+	 * through changing the version of data
 	 * @date: 2019/06/21
 	 **/
-	private List<MetanetNodeData> dataList;
+	private List<MetanetNodeData> dataHistoryList;
 
 	/**
 	 * @description: UTXOs belong to the address of current metanet node
@@ -66,18 +74,15 @@ public class MetanetNode {
 	 **/
 	private List<MetanetNode> children;
 
-	public MetanetNode(String pubKey, DeterministicKey key, MetanetNode parent) {
-		this.pubKey = pubKey;
+	public MetanetNode(NetworkParameters params, DeterministicKey key) {
+		this(params, key, null);
+	}
+
+	public MetanetNode(NetworkParameters params, DeterministicKey key, MetanetNode parent) {
 		this.key = key;
 		this.parent = parent;
-	}
-
-	public String getPubKey() {
-		return pubKey;
-	}
-
-	public void setPubKey(String pubKey) {
-		this.pubKey = pubKey;
+		address = key.toAddress(params).toBase58();
+		pubKey = Base64.getEncoder().encodeToString(key.getPubKey());
 	}
 
 	public long getBalance() {
@@ -96,28 +101,28 @@ public class MetanetNode {
 		this.balance = balance;
 	}
 
-	public List<MetanetNodeData> getDataList() {
-		return dataList;
+	public List<MetanetNodeData> getDataHistoryList() {
+		return dataHistoryList;
 	}
 
-	public void setDataList(List<MetanetNodeData> dataList) {
-		this.dataList = dataList;
+	public void setDataHistoryList(List<MetanetNodeData> dataHistoryList) {
+		this.dataHistoryList = dataHistoryList;
 	}
 
-	public String getCurrentVersion() {
-		return currentVersion;
+	public String getVersion() {
+		return version;
 	}
 
-	public void setCurrentVersion(String currentVersion) {
-		this.currentVersion = currentVersion;
+	public void setVersion(String version) {
+		this.version = version;
 	}
 
-	public List<String> getCurrentData() {
-		return currentData;
+	public List<String> getData() {
+		return data;
 	}
 
-	public void setCurrentData(List<String> currentData) {
-		this.currentData = currentData;
+	public void setData(List<String> data) {
+		this.data = data;
 	}
 
 	public List<MetanetNodeUTXO> getUtxoList() {
@@ -142,5 +147,21 @@ public class MetanetNode {
 
 	public void setChildren(List<MetanetNode> children) {
 		this.children = children;
+	}
+
+	public String getAddress() {
+		return address;
+	}
+
+	public void setAddress(String address) {
+		this.address = address;
+	}
+
+	public String getPubKey() {
+		return pubKey;
+	}
+
+	public void setPubKey(String pubKey) {
+		this.pubKey = pubKey;
 	}
 }

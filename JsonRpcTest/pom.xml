@@ -43,6 +43,11 @@
             <version>2.9.9</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.zeromq</groupId>
+            <artifactId>jeromq</artifactId>
+            <version>0.5.1</version>
+        </dependency>
 
 
     </dependencies>

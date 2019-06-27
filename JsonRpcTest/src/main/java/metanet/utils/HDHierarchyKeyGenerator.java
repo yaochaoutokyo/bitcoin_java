@@ -82,4 +82,18 @@ public class HDHierarchyKeyGenerator {
 		DeterministicKey childKey = hierarchy.get(numbers, true, true);
 		return childKey;
 	}
+
+	/**
+	 * @description: Derive child key by relative path with parent key
+	 * @param parentKey parent key
+	 * @param index index of child key
+	 * @date: 2019/06/23
+	 **/
+	public static DeterministicKey deriveChildKeyFromParentKey(DeterministicKey parentKey, int index) {
+		DeterministicHierarchy hierarchy = new DeterministicHierarchy(parentKey);
+		List<ChildNumber> numbers = new ArrayList<>();
+		numbers.add(new ChildNumber(index));
+		DeterministicKey childKey = hierarchy.get(numbers, true, true);
+		return childKey;
+	}
 }

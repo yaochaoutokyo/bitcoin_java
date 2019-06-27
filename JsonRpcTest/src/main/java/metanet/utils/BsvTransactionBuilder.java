@@ -44,29 +44,29 @@ public class BsvTransactionBuilder {
 	/**
 	 * @description: Add metanet-format root node output: the formula is
 	 * OP_RETURN META_FLAG PubKey_root
-	 * @param base64RootPubKey Base64 format of PubKey of root metanet node
+	 * @param base58Address Base58 format of address of root metanet node
 	 * @date: 2019/06/23
 	 **/
-	public BsvTransactionBuilder addMetanetRootNodeOutput(String base64RootPubKey, List<String> payloads) {
-		addMetanetChildNodeOutput(base64RootPubKey, NULL, payloads);
+	public BsvTransactionBuilder addMetanetRootNodeOutput(String base58Address, List<String> payloads) {
+		addMetanetChildNodeOutput(base58Address, NULL, payloads);
 		return this;
 	}
 
 	/**
 	 * @description: Add Metanet-format OP_RETURN output: the formula is
 	 * OP_RETURN META_FLAG PubKey_childNode TxHash_parentNode payload1 payload2....
-	 * @param base64ChildPubKey Base64 format of PubKey of child metanet node
+	 * @param base58Address Base58 format of address of child metanet node
 	 * @param parentNodeTxid Transaction Hash of parent node, usually the txHash of first input
 	 * @param payloads a List of String
 	 * @date: 2019/06/22
 	 **/
-	public BsvTransactionBuilder addMetanetChildNodeOutput(String base64ChildPubKey
+	public BsvTransactionBuilder addMetanetChildNodeOutput(String base58Address
 			, String parentNodeTxid, List<String> payloads) {
 		// Build the head of Metanet output
 		ScriptBuilder payloadBuilder = new ScriptBuilder()
 				.op(ScriptOpCodes.OP_RETURN)
 				.data(META.getBytes())
-				.data(base64ChildPubKey.getBytes())
+				.data(base58Address.getBytes())
 				.data(parentNodeTxid.getBytes());
 		// put payloads into Metanet output
 		for (String payload : payloads) {

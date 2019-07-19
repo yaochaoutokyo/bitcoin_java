@@ -1,7 +1,7 @@
 package metanet.manager;
 
 import metanet.domain.MetanetNode;
-import metanet.domain.MetanetNodeUTXO;
+import metanet.domain.MetnetNodeUTXO;
 import metanet.utils.BsvTransactionBuilder;
 import metanet.utils.HttpRequestSender;
 import org.bitcoinj.core.Address;
@@ -158,7 +158,7 @@ public class MetanetEdgeManager {
 		}
 		// prepare necessary information for build a transaction
 		DeterministicKey parentKey = parentNode.getKey();
-		List<MetanetNodeUTXO> parentNodeUtxoList = parentNode.getUtxoList();
+		List<MetnetNodeUTXO> parentNodeUtxoList = parentNode.getUtxoList();
 		// the newest data in the data list is the data tx of parent node
 		// for non-metanet node, the parentNodeDataList is null, when create root node from a non-metanet node
 		// it should be careful for this feature

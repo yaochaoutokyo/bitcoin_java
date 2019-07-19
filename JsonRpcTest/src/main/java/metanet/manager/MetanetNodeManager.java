@@ -7,7 +7,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import metanet.domain.MetanetNode;
 import metanet.domain.MetanetNodeData;
-import metanet.domain.MetanetNodeUTXO;
+import metanet.domain.MetnetNodeUTXO;
 import metanet.utils.HDHierarchyKeyGenerator;
 import metanet.utils.PlanariaQueryUrlBuilder;
 import metanet.utils.HttpRequestSender;
@@ -115,9 +115,9 @@ public class MetanetNodeManager {
 	 * @param currentNode current metanet node
 	 * @date: 2019/06/22
 	 **/
-	public List<MetanetNodeUTXO> getAndSetUTXOList(MetanetNode currentNode) {
+	public List<MetnetNodeUTXO> getAndSetUTXOList(MetanetNode currentNode) {
 		String json = HttpRequestSender.getUtxoForBase64PubKey(currentNode.getPubKey(), params);
-		List<MetanetNodeUTXO> utxoList = gson.fromJson(json, new TypeToken<List<MetanetNodeUTXO>>(){}.getType());
+		List<MetnetNodeUTXO> utxoList = gson.fromJson(json, new TypeToken<List<MetnetNodeUTXO>>(){}.getType());
 		currentNode.setUtxoList(utxoList);
 		return utxoList;
 	}
@@ -132,7 +132,7 @@ public class MetanetNodeManager {
 			getAndSetUTXOList(currentNode);
 		}
 		long balance = 0;
-		for (MetanetNodeUTXO utxo : currentNode.getUtxoList()) {
+		for (MetnetNodeUTXO utxo : currentNode.getUtxoList()) {
 			balance += utxo.getValue();
 		}
 		currentNode.setBalance(balance);

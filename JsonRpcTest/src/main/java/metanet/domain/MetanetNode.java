@@ -60,7 +60,7 @@ public class MetanetNode {
 	 * @description: UTXOs belong to the address of current metanet node
 	 * @date: 2019/06/21
 	 **/
-	private List<MetanetNodeUTXO> utxoList;
+	private List<MetnetNodeUTXO> utxoList;
 
 	/**
 	 * @description: Parent node
@@ -125,11 +125,11 @@ public class MetanetNode {
 		this.data = data;
 	}
 
-	public List<MetanetNodeUTXO> getUtxoList() {
+	public List<MetnetNodeUTXO> getUtxoList() {
 		return utxoList;
 	}
 
-	public void setUtxoList(List<MetanetNodeUTXO> utxoList) {
+	public void setUtxoList(List<MetnetNodeUTXO> utxoList) {
 		this.utxoList = utxoList;
 	}
 

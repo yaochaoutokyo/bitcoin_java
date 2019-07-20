@@ -15,6 +15,8 @@ import java.util.List;
  **/
 public class MetanetTreeManager {
 
+	private NetworkParameters params;
+
 	private MetanetNodeManager nodeManager;
 
 	private MetanetEdgeManager edgeManager;
@@ -26,6 +28,7 @@ public class MetanetTreeManager {
 	private static final String FILE = "file";
 
 	public MetanetTreeManager(NetworkParameters params) {
+		this.params = params;
 		nodeManager = new MetanetNodeManager(params);
 		edgeManager = new MetanetEdgeManager(params);
 	}
@@ -190,8 +193,7 @@ public class MetanetTreeManager {
 		DeterministicKey parentNodeKey = parentNode.getKey();
 		DeterministicKey dirNodeKey = HDHierarchyKeyGenerator.deriveChildKeyByRelativePath(parentNodeKey, relativePathOfDirNode);
 		// create new metanet node for the dir
-		String base64PubKeyOfDirNode = Base64.encode(dirNodeKey.getPubKey());
-		MetanetNode dirNode = new MetanetNode(base64PubKeyOfDirNode, dirNodeKey, parentNode);
+		MetanetNode dirNode = new MetanetNode(params, dirNodeKey, parentNode);
 		return dirNode;
 	}
 }

@@ -7,7 +7,8 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import metanet.domain.MetanetNode;
 import metanet.domain.MetanetNodeData;
-import metanet.domain.MetanetNodeUTXO;
+import metanet.domain.MetnetNodeUTXO;
+import metanet.utils.HDHierarchyKeyGenerator;
 import metanet.utils.PlanariaQueryUrlBuilder;
 import metanet.utils.HttpRequestSender;
 import org.bitcoinj.core.NetworkParameters;
@@ -84,14 +85,14 @@ public class MetanetNodeManager {
 	 * @date: 2019/06/22
 	 **/
 	public List<MetanetNodeData> getAndSetNodeDataList(MetanetNode currentNode, Integer limit) {
-		List<MetanetNodeData> dataList = new ArrayList<>();
+		List<MetanetNodeData> dataHistoryList = new ArrayList<>();
 		String json = getMetaTxSentToCurrentNode(currentNode, limit);
 		// the newest data is current data, so start from unconfirmed tx to traverse from newest tx to oldest tx
 		try {
 			JsonNode unconfirmedTxsNode = objectMapper.readTree(json).at("/u");
-			parseTxJsonNodeIntoDataList(unconfirmedTxsNode, dataList, currentNode);
+			parseTxJsonNodeIntoDataList(unconfirmedTxsNode, dataHistoryList, currentNode);
 			JsonNode confirmedTxsNode = objectMapper.readTree(json).at("/c");
-			parseTxJsonNodeIntoDataList(confirmedTxsNode, dataList, currentNode);
+			parseTxJsonNodeIntoDataList(confirmedTxsNode, dataHistoryList, currentNode);
 		} catch (JsonProcessingException e) {
 			System.out.println("fail to parse json");
 			e.printStackTrace();
@@ -99,14 +100,14 @@ public class MetanetNodeManager {
 			System.out.println("fail to read json node");
 			e.printStackTrace();
 		}
-		currentNode.setDataList(dataList);
-		if (! dataList.isEmpty()) {
+		currentNode.setDataHistoryList(dataHistoryList);
+		if (! dataHistoryList.isEmpty()) {
 			// todo: decide the version order of data by payload item, instead of confirmed time order
-			MetanetNodeData latestData = dataList.get(dataList.size() - 1);
-			currentNode.setCurrentVersion(latestData.getTxid());
-			currentNode.setCurrentData(latestData.getPayloads());
+			MetanetNodeData latestData = dataHistoryList.get(0);
+			currentNode.setVersion(latestData.getTxid());
+			currentNode.setData(latestData.getPayloads());
 		}
-		return dataList;
+		return dataHistoryList;
 	}
 
 	/**
@@ -114,9 +115,9 @@ public class MetanetNodeManager {
 	 * @param currentNode current metanet node
 	 * @date: 2019/06/22
 	 **/
-	public List<MetanetNodeUTXO> getAndSetUTXOList(MetanetNode currentNode) {
+	public List<MetnetNodeUTXO> getAndSetUTXOList(MetanetNode currentNode) {
 		String json = HttpRequestSender.getUtxoForBase64PubKey(currentNode.getPubKey(), params);
-		List<MetanetNodeUTXO> utxoList = gson.fromJson(json, new TypeToken<List<MetanetNodeUTXO>>(){}.getType());
+		List<MetnetNodeUTXO> utxoList = gson.fromJson(json, new TypeToken<List<MetnetNodeUTXO>>(){}.getType());
 		currentNode.setUtxoList(utxoList);
 		return utxoList;
 	}
@@ -131,7 +132,7 @@ public class MetanetNodeManager {
 			getAndSetUTXOList(currentNode);
 		}
 		long balance = 0;
-		for (MetanetNodeUTXO utxo : currentNode.getUtxoList()) {
+		for (MetnetNodeUTXO utxo : currentNode.getUtxoList()) {
 			balance += utxo.getValue();
 		}
 		currentNode.setBalance(balance);
@@ -144,14 +145,14 @@ public class MetanetNodeManager {
 	 * @date: 2019/06/22
 	 **/
 	public List<MetanetNode> getAndSetChildrenNode(MetanetNode currentNode, Integer limit) {
-		LinkedHashSet<String> childrenPubKeySet = new LinkedHashSet<>();
+		LinkedHashSet<String> childrenAddressSet = new LinkedHashSet<>();
 		String json = getMetaTxSentFromCurrentNode(currentNode, limit);
 		// need to traverse from oldest tx to newest tx, so start from confirmed transaction
 		try {
 			JsonNode confirmedTxsNode = objectMapper.readTree(json).at("/c");
-			parseTxJsonIntoChildrenPubKeySet(confirmedTxsNode, childrenPubKeySet);
+			parseTxJsonIntoChildrenPubKeySet(confirmedTxsNode, childrenAddressSet);
 			JsonNode unconfirmedTxsNode = objectMapper.readTree(json).at("/u");
-			parseTxJsonIntoChildrenPubKeySet(unconfirmedTxsNode, childrenPubKeySet);
+			parseTxJsonIntoChildrenPubKeySet(unconfirmedTxsNode, childrenAddressSet);
 		} catch (JsonProcessingException e) {
 			System.out.println("fail to parse json");
 			e.printStackTrace();
@@ -161,13 +162,13 @@ public class MetanetNodeManager {
 		}
 		List<MetanetNode> children = new ArrayList<>();
 		DeterministicKey parentKey = currentNode.getKey();
-		int indexOfChildPath = 0;
-		for (String childPubKey : childrenPubKeySet) {
+		int indexOfChild = 0;
+		for (String childAddress : childrenAddressSet) {
 			// todo: decide the order of child node by data payload, instead of the confirmed time order.
-			DeterministicKey childKey = parentKey.derive(indexOfChildPath);
-			MetanetNode child = new MetanetNode(childPubKey, childKey, currentNode);
+			DeterministicKey childKey = HDHierarchyKeyGenerator.deriveChildKeyFromParentKey(parentKey, indexOfChild);
+			MetanetNode child = new MetanetNode(params, childKey, currentNode);
 			children.add(child);
-			indexOfChildPath++;
+			indexOfChild++;
 		}
 		currentNode.setChildren(children);
 		return children;
@@ -185,7 +186,7 @@ public class MetanetNodeManager {
 		String url = builder
 				.addOpReturn()
 				.addMetaFlag()
-				.addChildNodePubKeyScript(currentNode.getPubKey())
+				.addChildNodeAddress(currentNode.getAddress())
 				.setQueryLimit(limit)
 				.buildUrl();
 		String json = HttpRequestSender.sendHttpRequestToPlanaria(url);
@@ -228,9 +229,10 @@ public class MetanetNodeManager {
 				JsonNode metaNode = output.at("/s1");
 				String metaFlag = metaNode.toString().isEmpty() ? null : objectMapper.treeToValue(metaNode, String.class);
 				if (metaFlag != null && metaFlag.equals(META)) {
-					String childPubKey = objectMapper.treeToValue(output.at("/s2"), String.class);
-					if (! childrenSet.contains(childPubKey)) {
-						childrenSet.add(childPubKey);
+					String childAddress = objectMapper.treeToValue(output.at("/s2"), String.class);
+					// todo: set s5 be the location of child node in HD Key tree
+					if (! childrenSet.contains(childAddress)) {
+						childrenSet.add(childAddress);
 					}
 				}
 			}
@@ -257,23 +259,18 @@ public class MetanetNodeManager {
 				JsonNode metaNode = output.at("/s1");
 				String metaFlag = metaNode.toString().isEmpty() ? null : objectMapper.treeToValue(metaNode, String.class);
 				if (metaFlag != null && metaFlag.equals(META)) {
-					String childPubKey = objectMapper.treeToValue(output.at("/s2"), String.class);
-					String parentTxid = output.at("/s3").toString();
-					if (currentNode.getPubKey().equals(childPubKey)) {
+					String childAddress = objectMapper.treeToValue(output.at("/s2"), String.class);
+					if (currentNode.getAddress().equals(childAddress)) {
 						List<String> payloads = new ArrayList<>();
-						JsonNode payLoadNode = output.at("/s4");
-						int index = 4;
+						JsonNode payLoadNode = output.at("/s3");
+						int index = 3;
 						while (! payLoadNode.toString().isEmpty()) {
 							String payload = objectMapper.treeToValue(payLoadNode, String.class);
 							payloads.add(payload);
 							String nextPayloadNodePath = String.format("/s%s", ++index);
 							payLoadNode = output.at(nextPayloadNodePath);
 						}
-						// the parentTxid of root node is NULL, it can distinguish root node with this feature
-						if (! parentTxid.equals("NULL")) {
-							// if the node have parentTxid, set payloads, otherwise, leave payloads as null
-							data.setPayloads(payloads);
-						}
+						data.setPayloads(payloads);
 						// todo: support multi-output to one child key
 						// the is only one meta-data output belong to current node, so once it has been found, break the loop
 						break;

@@ -1,9 +1,7 @@
 package metanet.manager;
 
-import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import metanet.domain.MetanetNode;
-import metanet.domain.MetanetNodeData;
-import metanet.domain.MetanetNodeUTXO;
+import metanet.domain.MetnetNodeUTXO;
 import metanet.utils.BsvTransactionBuilder;
 import metanet.utils.HttpRequestSender;
 import org.bitcoinj.core.Address;
@@ -49,12 +47,12 @@ public class MetanetEdgeManager {
 	/**
 	 * bytes per empty metanet output
 	 */
-	private static final long BYTES_PER_EMPTY_META_OUTPUT = 124L;
+	private static final long BYTES_PER_EMPTY_META_OUTPUT = 114L;
 
 	/**
 	 * bytes per root meta output
 	 */
-	private static final long BYTES_ROOT_META_OUTPUT = 59L;
+	private static final long BYTES_ROOT_META_OUTPUT = 55L;
 
 	/**
 	 * 1 char is 1 byte
@@ -160,23 +158,22 @@ public class MetanetEdgeManager {
 		}
 		// prepare necessary information for build a transaction
 		DeterministicKey parentKey = parentNode.getKey();
-		List<MetanetNodeUTXO> parentNodeUtxoList = parentNode.getUtxoList();
-		List<MetanetNodeData> parentNodeDataList = parentNode.getDataList();
+		List<MetnetNodeUTXO> parentNodeUtxoList = parentNode.getUtxoList();
 		// the newest data in the data list is the data tx of parent node
 		// for non-metanet node, the parentNodeDataList is null, when create root node from a non-metanet node
 		// it should be careful for this feature
 		Address parentAddress = parentKey.toAddress(params);
 		DeterministicKey childKey = childNode.getKey();
-		String base64ChildPubKey = Base64.encode(childKey.getPubKey());
 		Address childAddress = childKey.toAddress(params);
+		String base58ChildAddress = childNode.getAddress();
 
 		// add metanet-format OP_RETURN output
 		BsvTransactionBuilder txBuilder = new BsvTransactionBuilder(params);
 		if (isRoot) {
-			txBuilder.addMetanetRootNodeOutput(base64ChildPubKey, payloads);
+			txBuilder.addMetanetRootNodeOutput(base58ChildAddress, payloads);
 		} else if (payloads != null) {
-			String currentParentNodeDataHash = parentNode.getCurrentVersion();
-			txBuilder.addMetanetChildNodeOutput(base64ChildPubKey, currentParentNodeDataHash, payloads);
+			String currentParentNodeDataHash = parentNode.getVersion();
+			txBuilder.addMetanetChildNodeOutput(base58ChildAddress, currentParentNodeDataHash, payloads);
 		}
 
 		// add P2PKH output to child node
@@ -188,8 +185,8 @@ public class MetanetEdgeManager {
 		// estimate txFee
 		long outputNum = valueSendToChild == 0 ? 1 : 2;
 		long inputNum = parentNodeUtxoList.size();
-		long metaOutputNum = payloads != null ? 1 : 0;
 		long rootMetaOutputNum = isRoot ? 1 : 0;
+		long metaOutputNum = isRoot ? 0 : payloads != null ? 1 : 0;
 		Coin transactionFee = estimateTransactionFee(inputNum, outputNum, metaOutputNum, rootMetaOutputNum, payloads);
 
 		// calculate change value

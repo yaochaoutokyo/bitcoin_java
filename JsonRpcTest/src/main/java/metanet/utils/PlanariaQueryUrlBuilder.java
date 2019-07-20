@@ -51,11 +51,11 @@ public class PlanariaQueryUrlBuilder {
 
 	/**
 	 * @description: add base64 pubKey into the second term after OP_RETURN which is "out.b2" condition
-	 * @param childPubKey base64 pubKey of child node
+	 * @param childAddress base64 pubKey of child node
 	 * @date: 2019/06/22
 	 **/
-	public PlanariaQueryUrlBuilder addChildNodePubKeyScript(String childPubKey) {
-		String condition = String.format("\"out.s2\":\"%s\"", childPubKey);
+	public PlanariaQueryUrlBuilder addChildNodeAddress(String childAddress) {
+		String condition = String.format("\"out.s2\":\"%s\"", childAddress);
 		findConditions.add(condition);
 		return this;
 	}

@@ -1,11 +1,11 @@
-package metanet.domain;
+package fake_user;
 
 /**
  * @description: Metanet node utxo class
  * @author YAO Chao
  * @date: 2019/06/25
  **/
-public class MetanetNodeUTXO {
+public class UserUTXO {
 
 	/**
 	 * @description: Transaction id of the UTXO

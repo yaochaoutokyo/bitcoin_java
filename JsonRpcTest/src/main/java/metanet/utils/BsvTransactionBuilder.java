@@ -1,6 +1,6 @@
 package metanet.utils;
 
-import metanet.domain.MetanetNodeUTXO;
+import metanet.domain.MetnetNodeUTXO;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
@@ -44,29 +44,29 @@ public class BsvTransactionBuilder {
 	/**
 	 * @description: Add metanet-format root node output: the formula is
 	 * OP_RETURN META_FLAG PubKey_root
-	 * @param base64RootPubKey Base64 format of PubKey of root metanet node
+	 * @param base58Address Base58 format of address of root metanet node
 	 * @date: 2019/06/23
 	 **/
-	public BsvTransactionBuilder addMetanetRootNodeOutput(String base64RootPubKey, List<String> payloads) {
-		addMetanetChildNodeOutput(base64RootPubKey, NULL, payloads);
+	public BsvTransactionBuilder addMetanetRootNodeOutput(String base58Address, List<String> payloads) {
+		addMetanetChildNodeOutput(base58Address, NULL, payloads);
 		return this;
 	}
 
 	/**
 	 * @description: Add Metanet-format OP_RETURN output: the formula is
 	 * OP_RETURN META_FLAG PubKey_childNode TxHash_parentNode payload1 payload2....
-	 * @param base64ChildPubKey Base64 format of PubKey of child metanet node
+	 * @param base58Address Base58 format of address of child metanet node
 	 * @param parentNodeTxid Transaction Hash of parent node, usually the txHash of first input
 	 * @param payloads a List of String
 	 * @date: 2019/06/22
 	 **/
-	public BsvTransactionBuilder addMetanetChildNodeOutput(String base64ChildPubKey
+	public BsvTransactionBuilder addMetanetChildNodeOutput(String base58Address
 			, String parentNodeTxid, List<String> payloads) {
 		// Build the head of Metanet output
 		ScriptBuilder payloadBuilder = new ScriptBuilder()
 				.op(ScriptOpCodes.OP_RETURN)
 				.data(META.getBytes())
-				.data(base64ChildPubKey.getBytes())
+				.data(base58Address.getBytes())
 				.data(parentNodeTxid.getBytes());
 		// put payloads into Metanet output
 		for (String payload : payloads) {
@@ -83,7 +83,7 @@ public class BsvTransactionBuilder {
 	 * @param parentKey the ECKey of parent
 	 * @date: 2019/06/24
 	 **/
-	public BsvTransactionBuilder addSignedInputs(List<MetanetNodeUTXO> utxoList, ECKey parentKey) {
+	public BsvTransactionBuilder addSignedInputs(List<MetnetNodeUTXO> utxoList, ECKey parentKey) {
 		this.addInputs(utxoList);
 		addSignatures(utxoList, parentKey);
 		return this;
@@ -113,9 +113,9 @@ public class BsvTransactionBuilder {
 	 * @param utxoList utxos of parent node
 	 * @date: 2019/06/24
 	 **/
-	private BsvTransactionBuilder addInputs(List<MetanetNodeUTXO> utxoList) {
+	private BsvTransactionBuilder addInputs(List<MetnetNodeUTXO> utxoList) {
 		// add all input into transaction
-		for (MetanetNodeUTXO utxo : utxoList) {
+		for (MetnetNodeUTXO utxo : utxoList) {
 			Sha256Hash utxoHash = Sha256Hash.wrap(utxo.getTxid());
 			tx.addInput(utxoHash, utxo.getVout(), new Script(new byte[]{}));
 		}
@@ -128,10 +128,10 @@ public class BsvTransactionBuilder {
 	 * @param parentKey the ECKey of parent
 	 * @date: 2019/06/24
 	 **/
-	private BsvTransactionBuilder addSignatures(List<MetanetNodeUTXO> utxoList, ECKey parentKey) {
+	private BsvTransactionBuilder addSignatures(List<MetnetNodeUTXO> utxoList, ECKey parentKey) {
 		for (int i = 0; i< utxoList.size(); i++) {
 			// make signature with [ALL | FORK_ID]
-			MetanetNodeUTXO utxo = utxoList.get(i);
+			MetnetNodeUTXO utxo = utxoList.get(i);
 			Script pubKeyScript = new Script(HEX.decode(utxo.getScriptPubKey()));
 			Sha256Hash hash = tx.hashForSignatureWitness(i, pubKeyScript, Coin.SATOSHI.multiply(utxo.getValue()),
 					Transaction.SigHash.ALL, false);

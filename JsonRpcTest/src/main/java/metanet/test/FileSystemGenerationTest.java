@@ -10,8 +10,6 @@ import org.bitcoinj.params.MainNetParams;
 import java.util.Arrays;
 import java.util.List;
 
-import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
-
 /**
  * Created by yaochao on 2019/06/19
  */
@@ -25,14 +23,13 @@ public class FileSystemGenerationTest {
 				, "cousin", "remove", "poet", "negative", "live", "reward", "hurdle"});
 		String passphrase = "yc19931012";
 		DeterministicKey originKey = HDHierarchyKeyGenerator.restoreMasterKeyFromMnemonicCode(newMnemonics, passphrase);
-		DeterministicKey rootKey = HDHierarchyKeyGenerator.deriveChildKeyByAbsolutePath(originKey, "M/1");
-		MetanetNode rootNode = new MetanetNode(Base64.encode(rootKey.getPubKey()), rootKey, null);
-		nodeManager.getMetanetTree(rootNode);
+		MetanetNode originNode = new MetanetNode(params, originKey, null);
 
-		DeterministicKey root1Key = HDHierarchyKeyGenerator.deriveChildKeyByAbsolutePath(originKey, "M/0");
-		System.out.println(root1Key.serializePrivB58(params));
-		MetanetNode root1Node = new MetanetNode(Base64.encode(root1Key.getPubKey()), root1Key, null);
-		nodeManager.getMetanetNodeInfo(root1Node);
+		// todo: the tx order in planaria and whatsonchain could be different, it is better to add the transaction version and child location in to the payloads
+		DeterministicKey rootKey2 = HDHierarchyKeyGenerator.deriveChildKeyByRelativePath(originKey, "/2");
+		MetanetNode rootNode2 = new MetanetNode(params, rootKey2, null);
+		nodeManager.getMetanetTree(rootNode2);
+		System.out.println("...");
 	}
 }
 

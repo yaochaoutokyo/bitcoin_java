@@ -1,14 +1,25 @@
-package metanet.utils;
+package utils;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
-import org.bitcoinj.core.NetworkParameters;
+import domain.WhatsOnChainUTXO;
+import domain.UserUTXO;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.params.MainNetParams;
 import wf.bitcoin.javabitcoindrpcclient.BitcoinJSONRPCClient;
 import wf.bitcoin.javabitcoindrpcclient.BitcoinRPCException;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.bitcoinj.core.Utils.HEX;
 
 /**
  * @description: Util for dealing with Http request
@@ -21,7 +32,9 @@ public class HttpRequestSender {
 
 	private static BitcoinJSONRPCClient jsonRpcClient;
 
-	private static final String PLANARIA_KEY = "1KWqy2WbNpEPC7hwvfJbvXy2vekS2LwGim";
+	private static Gson gson = new Gson();
+
+	private static final String WHATSONCHAIN_GET_UTXO = "https://api.whatsonchain.com/v1/bsv/main/address/%s/unspent";
 
 	private static final String JSON_RPC_URL = "http://admin:huobijp@52.199.36.243:8332";
 
@@ -37,29 +50,34 @@ public class HttpRequestSender {
 	}
 
 	/**
-	 * @description: send query request to planaria
-	 * @param url query url
+	 * @description: Query UTXOs of current pubKey by using Bitindex API
 	 * @date: 2019/06/23
 	 **/
-	public static String sendHttpRequestToPlanaria(String url) {
-		Request request = new Request.Builder().header("key",PLANARIA_KEY).url(url).build();
-		return sendHttpRequest(request);
+	public static List<UserUTXO> getUtxoFromBitIndex(String address) {
+		String url = String.format(BITINDEX_GET_UTXO_WITH_ADDRESS, "main", address);
+		String json = sendHttpRequest(url);
+		return gson.fromJson(json, new TypeToken<List<UserUTXO>>(){}.getType());
 	}
 
-	/**
-	 * @description: Query UTXOs of current pubKey by using Bitindex API
-	 * @param base64PubKey base64 format of pubKey
-	 * @param params network type
-	 * @date: 2019/06/23
-	 **/
-	public static String getUtxoForBase64PubKey(String base64PubKey, NetworkParameters params) {
-		if (! params.equals(MainNetParams.get())) {
-			throw new IllegalArgumentException("currently Bitindex only support main net");
-		}
-		String base58Address = AddressFormatTransformer.base64PubKeyToBase58Address(params, base64PubKey);
-		String url = String.format(BITINDEX_GET_UTXO_WITH_ADDRESS, "main", base58Address);
-		return sendHttpRequest(url);
-	}
+	public static List<UserUTXO> getUtxoFromWhatOnChain(String address) {
+        String url = String.format(WHATSONCHAIN_GET_UTXO, address);
+        String json = sendHttpRequest(url);
+        List<WhatsOnChainUTXO> whatsOnChainUTXOS = gson.fromJson(json, new TypeToken<List<WhatsOnChainUTXO>>(){}.getType());
+        Transaction tx = new Transaction(MainNetParams.get());
+        TransactionOutput transactionOutput = tx.addOutput(Coin.ZERO, Address.fromBase58(MainNetParams.get(), address));
+        String scriptPubKey = HEX.encode(transactionOutput.getScriptBytes());
+        List<UserUTXO> userUTXOS = new ArrayList<>();
+        for (WhatsOnChainUTXO utxo : whatsOnChainUTXOS) {
+            UserUTXO userUTXO = new UserUTXO();
+            userUTXO.setTxid(utxo.getTxid());
+            userUTXO.setAddress(address);
+            userUTXO.setScriptPubKey(scriptPubKey);
+            userUTXO.setVout(utxo.getIndex());
+            userUTXO.setValue(utxo.getValue());
+            userUTXOS.add(userUTXO);
+        }
+        return userUTXOS;
+    }
 
 	/**
 	 * @description: Fundamental method for sending http request
@@ -105,10 +123,10 @@ public class HttpRequestSender {
 	 * @param txHex Hex format of raw transaction
 	 * @date: 2019/06/23
 	 **/
-	public static String decodeRawTransaction(String txHex) {
+	public static BitcoinJSONRPCClient.RawTransaction decodeRawTransaction(String txHex) {
 		BitcoinJSONRPCClient.RawTransaction rawTx = jsonRpcClient.decodeRawTransaction(txHex);
 		System.out.format("raw tx => %s\n",rawTx);
-		return rawTx.toString();
+		return rawTx;
 	}
 
 	/**

@@ -1,4 +1,4 @@
-package metanet.utils;
+package utils;
 
 import org.bitcoinj.crypto.*;
 

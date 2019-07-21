@@ -1,4 +1,4 @@
-package fake_user;
+package domain;
 
 /**
  * @description: Metanet node utxo class

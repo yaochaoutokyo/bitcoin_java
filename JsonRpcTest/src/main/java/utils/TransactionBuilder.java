@@ -1,5 +1,6 @@
-package fake_user;
+package utils;
 
+import domain.UserUTXO;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
@@ -219,8 +220,7 @@ public class TransactionBuilder {
 		}
 		long txFeeSum = EXTRA_BYTES + INITIAL_LENGTH_BYTES + inputFee + outputFee
 				+ metaOutputFee + rootMetaOutputFee + payloadFee;
-		Coin txFee = Coin.SATOSHI.multiply(txFeeSum * feePerByte);
-		return txFee;
+        return Coin.SATOSHI.multiply(txFeeSum * feePerByte);
 	}
 
 	public long getTotalInput() {
